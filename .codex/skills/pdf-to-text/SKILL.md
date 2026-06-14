@@ -1,16 +1,11 @@
 ---
 name: pdf-to-text
-description:
-  Convert a newly added official response PDF in a `response/` directory into
-  `response.md` in the same directory by rendering screenshots and transcribing
-  the text visually from those screenshots.
-
-  Use when the user asks to open a newly added PDF response, screenshot it, and
-  type the text into a new `response.md`; asks to convert a response PDF to
-  text; mentions `pdf to text`, `response pdf`, `response.md`; or says
-  `Расшифруй ответ`, `Переведи ответ в текст`, `Сохрани ответ как текст`.
-  
-  
+description: >-
+  Converts an official response PDF in a case `response/` directory into
+  `response.md` by rendering page screenshots and transcribing the text.
+  Use when the user asks to convert a response PDF to text, mentions
+  `pdf to text`, `response pdf`, `response.md`, `Расшифруй ответ`,
+  `Переведи ответ в текст`, or `Сохрани ответ как текст`.
 ---
 
 # PDF to Text
@@ -45,9 +40,17 @@ Preserve the source wording. Do not improve style, summarize, or rewrite the res
 
 4. Render screenshots of the PDF pages.
 
-- Use local macOS rendering tools already available in the environment.
+- On macOS, render with `qlmanage`:
+
+```bash
+mkdir -p response/_pdf_pages
+qlmanage -t -s 2000 -o response/_pdf_pages "response/file.pdf"
+```
+
+- Request full permissions if sandbox blocks rendering.
 - Render every page in reading order.
-- If rendering fails, report the failure and do not create an empty or partial `response.md`.
+- If rendering fails, try reading the PDF with the Read tool as a fallback, then verify date, number, and signature block from the rendered image if possible.
+- If both methods fail, report the failure and do not create an empty or partial `response.md`.
 
 5. Transcribe from the screenshots.
 
@@ -60,6 +63,7 @@ Preserve the source wording. Do not improve style, summarize, or rewrite the res
 
 - Write the transcription to `response/response.md`.
 - Keep the file limited to the document text and simple Markdown structure.
+- Delete `response/_pdf_pages/` after transcription is complete.
 
 ## Output Format
 
@@ -92,7 +96,7 @@ Formatting rules:
 
 Typical requests that should trigger this skill:
 
-- `Use $pdf-to-text`
+- `pdf to text`
 - `Convert the response PDF into response.md`
 - `Расшифруй ответ`
 - `Сделай из PDF в response текстовый response.md`

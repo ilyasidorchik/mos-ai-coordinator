@@ -1,0 +1,4 @@
+interface:
+  display_name: "Inbox"
+  short_description: "Route inbox PDFs to cases and transcribe responses"
+  default_prompt: "Use $inbox to process PDF files in the inbox folder."
