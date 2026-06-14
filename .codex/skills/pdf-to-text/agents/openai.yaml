@@ -1,0 +1,4 @@
+interface:
+  display_name: "PDF to Text"
+  short_description: "Convert response PDFs into response.md"
+  default_prompt: "Use $pdf-to-text to convert the response PDF in this case into response.md."
