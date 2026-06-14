@@ -1,0 +1,4 @@
+interface:
+  display_name: "Prepare Request"
+  short_description: "Review request.md and run typograf"
+  default_prompt: "Use $prepare-request to review and prepare the appeal in request.md."

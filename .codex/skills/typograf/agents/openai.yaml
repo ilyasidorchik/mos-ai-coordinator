@@ -1,0 +1,4 @@
+interface:
+  display_name: "Typograf"
+  short_description: "Apply Russian typography to appeal texts"
+  default_prompt: "Use $typograf to typograf the specified text or file."
