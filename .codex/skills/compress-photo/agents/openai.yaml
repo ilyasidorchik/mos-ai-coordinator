@@ -1,0 +1,4 @@
+interface:
+  display_name: "Compress Photo"
+  short_description: "Compress one photo with Squoosh for mos.ru"
+  default_prompt: "Use $compress-photo to compress the specified photo for submission."
