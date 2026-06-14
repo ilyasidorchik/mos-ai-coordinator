@@ -1,0 +1,4 @@
+interface:
+  display_name: "Submit mos.ru Appeal"
+  short_description: "Fill mos.ru reception form from request.md; user attaches photos"
+  default_prompt: "Use $submit-request to submit the appeal from request.md via Browser Tab."

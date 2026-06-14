@@ -1,0 +1,139 @@
+---
+name: submit-request
+description: >-
+  Fills and submits an appeal on mos.ru/feedback/reception/ from request.md
+  using Cursor Browser Tab. Photo upload is handed off to the user. Use when
+  the user asks to submit an appeal on mos.ru, mentions «Отправь обращение»,
+  «Подай обращение», «Заполни форму на mos.ru», or wants browser automation
+  for Дептранс reception.
+disable-model-invocation: true
+---
+
+# Submit mos.ru Appeal
+
+## Overview
+
+Submit an appeal from a case `request/request.md` via **Browser Tab** (MCP `cursor-ide-browser`).
+
+Agent fills the form; **user attaches photos manually** — CDP file upload is blocked in Browser Tab.
+
+## Prerequisites
+
+Before starting, verify:
+
+1. **Browser Tab** enabled: Settings → Tools & MCP → Browser Automation → Browser Tab.
+2. User is **logged in to mos.ru in Browser Tab** (not system Chrome/Safari — sessions are separate).
+3. Photos in `request/photos/` are each **under 5 MB** (run `compress-photo` if needed).
+4. `request.md` is ready (`prepare-request` if user asked for editorial pass).
+
+If Browser Tab tools are unavailable, stop and tell the user to enable Browser Tab and authorize in it.
+
+## Parse request.md
+
+Read the case `request/request.md`:
+
+| Block | Use in form |
+|-------|-------------|
+| Line after `Номера обращений:` | Agency short name (e.g. `Дептранс`; strip leading appeal number if present) |
+| After `Заголовок:` | Field «Тема обращения» |
+| After `Текст:` until end | Field «Текст обращения» (plain text, no service headers) |
+
+Also read `request/photos/` — list every file to attach. Derive address hint from text or coordinates if present; otherwise ask the user.
+
+### Agency search strings
+
+| Short name in request.md | Search in recipient picker |
+|--------------------------|----------------------------|
+| Дептранс | `Департамент транспорта` |
+| ДКР | `Департамент капитального ремонта` |
+| ЦОДД | `Центр организации дорожного движения` |
+
+If the short name is unknown, ask the user for the search string before continuing.
+
+## Browser workflow
+
+Follow `cursor-ide-browser` lock order: `browser_tabs` → `browser_navigate` → `browser_lock` → interactions → `browser_unlock`.
+
+URL: `https://mos.ru/feedback/reception/`
+
+### Step 1 — Recipient
+
+1. Click «Выбрать получателя» / «Отправить обращение» if on landing page.
+2. Fill search with agency string from table above.
+3. Select the matching row. If radio buttons do not respond to `browser_click` (hidden inputs), use `browser_cdp` → `Runtime.evaluate` to click the radio or its label.
+4. Confirm selection («Выбрать») and click «Продолжить».
+
+### Step 2 — Skip or confirm
+
+Click «Продолжить» through intermediate steps until the appeal form (theme + text) appears.
+
+### Step 3 — Theme, text, address
+
+1. Fill «Тема обращения» and «Текст обращения» from `request.md`.
+2. Fill address field with a specific Moscow query (e.g. `улица Заповедная, Москва`), pick the correct suggestion from the dropdown.
+3. **Verify city is Москва**, not another region. If autocomplete picks the wrong city, re-search or use checkbox «Адреса нет в списке» and enter address manually.
+4. Do **not** click «Продолжить» to step 4 until photos are attached (next section).
+
+### Step 3½ — Photo upload (USER)
+
+**Stop automation. Hand off to the user.**
+
+Tell the user clearly:
+
+> Прикрепите все файлы из `<case>/request/photos/` через «Добавить файл» на текущем шаге формы. Когда закончите, напишите «готово» / «фото приложены».
+
+Optionally open the photos folder in Finder:
+
+```bash
+open "<absolute-path-to-case>/request/photos/"
+```
+
+**Do not** attempt:
+
+- `DOM.setFileInputFiles` via CDP — denied in Browser Tab;
+- AppleScript / system file dialogs — unreliable.
+
+Wait for user confirmation before proceeding.
+
+### Step 4 — Confirm and submit
+
+After user confirms photos:
+
+1. Click «Продолжить» to reach step 4/4 if not already there.
+2. Check required consent checkboxes. If they are hidden (`opacity: 0`), use `Runtime.evaluate` to click unchecked boxes.
+3. Read captcha from `browser_take_screenshot`, fill the captcha field.
+4. **Submit only if the user explicitly asked** (e.g. «отправь», «можно отправлять»). Otherwise stop before «Отправить обращение» and ask for approval.
+5. After successful submit, copy the appeal number from the confirmation page.
+6. Write it to `request.md` under `Номера обращений:` in format `<number> <agency>`, preserving existing numbers on separate lines if this is a repeat appeal.
+
+Example:
+
+```markdown
+Номера обращений:
+57749568 Дептранс
+```
+
+## Safety rules
+
+- Default: **do not submit** without explicit user approval.
+- Do not invent appeal numbers, addresses, or agency names.
+- If login is required, unlock browser and ask user to sign in in Browser Tab.
+- If captcha fails, report and retry once; then ask user to help.
+- After four failed actions on the same step, stop and report blocker + suggested next step.
+
+## Expected user phrases
+
+- `Отправь обращение` / `Подай обращение на mos.ru`
+- `Заполни форму из @case/request/request.md`
+- `Продолжай` / `Фото приложены` / `Готово` — after manual photo upload
+- `Отправляй` / `Можно отправлять` — permission to submit
+
+## Report to user
+
+When done (or paused for photos), summarize:
+
+- current form step;
+- what was filled (recipient, theme, address);
+- photo handoff status;
+- appeal number if submitted;
+- whether `request.md` was updated.
