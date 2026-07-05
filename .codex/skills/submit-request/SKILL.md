@@ -38,6 +38,8 @@ Read the case `request/request.md`:
 | After `Заголовок:` | Field «Тема обращения» |
 | After `Текст:` until end | Field «Текст обращения» (plain text, no service headers) |
 
+Preserve the extracted title and appeal text **byte-for-byte except for the removed service headers**. Do not manually retype, reconstruct, normalize, or "clean up" the text while filling the form: this can silently remove typography such as non-breaking spaces. Prefer extracting the blocks from the already-read `request.md` into variables and passing those exact strings to the browser fill tool.
+
 Also read `request/photos/` — list every file to attach. Derive address hint from text or coordinates if present; otherwise ask the user.
 
 ### Agency search strings
@@ -69,10 +71,11 @@ Click «Продолжить» through intermediate steps until the appeal form 
 
 ### Step 3 — Theme, text, address
 
-1. Fill «Тема обращения» and «Текст обращения» from `request.md`.
-2. Fill address field with a specific Moscow query (e.g. `улица Заповедная, Москва`), pick the correct suggestion from the dropdown.
-3. **Verify city is Москва**, not another region. If autocomplete picks the wrong city, re-search or use checkbox «Адреса нет в списке» and enter address manually.
-4. Do **not** click «Продолжить» to step 4 until photos are attached (next section).
+1. Fill «Тема обращения» and «Текст обращения» with the exact strings extracted from `request.md`.
+2. After filling, inspect the DOM value of both fields and compare it with the extracted strings. If they differ in meaningful characters or typography (including NBSP `\u00A0`, guillemets, dashes, `№`, or `ё`), replace the field value before continuing.
+3. Fill address field with a specific Moscow query (e.g. `улица Заповедная, Москва`), pick the correct suggestion from the dropdown.
+4. **Verify city is Москва**, not another region. If autocomplete picks the wrong city, re-search or use checkbox «Адреса нет в списке» and enter address manually.
+5. Do **not** click «Продолжить» to step 4 until photos are attached (next section).
 
 ### Step 3½ — Photo upload (USER)
 
@@ -116,6 +119,7 @@ Example:
 ## Safety rules
 
 - Default: **do not submit** without explicit user approval.
+- Do not manually reconstruct appeal text for the form. Preserve typography from `request.md`, especially non-breaking spaces.
 - Do not invent appeal numbers, addresses, or agency names.
 - If login is required, unlock browser and ask user to sign in in Browser Tab.
 - If captcha fails, report and retry once; then ask user to help.
