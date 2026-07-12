@@ -17,6 +17,7 @@ Process official response PDFs dropped into [`inbox/`](../../../inbox/):
 1. Match each PDF to the right case.
 2. Move it to `<case>/response/`.
 3. Run the [`pdf-to-text`](../pdf-to-text/SKILL.md) workflow for that file.
+4. Report; after the user Applies `response.md`, the project hook commits and pushes.
 
 Do not duplicate transcription logic here — always delegate step 3 to `pdf-to-text`.
 
@@ -139,12 +140,37 @@ For each PDF:
 ```text
 inbox/foo.pdf → ZAO/troparyovo/anokhina bus lane/response/ (score 185: заголовок + содержание: локация+тема)
   response.md: создан
+
+Чтобы сохранить и запушить — Apply у `response.md`.
 ```
 
 ```text
 inbox/bar.pdf → … (score 55, низкая уверенность; совпала только тема «пешеходный переход»; альтернативы: vereskovaya 50, dezhnyova 45)
   response.md: уже существует, пропущен
+  hook не сработает — при необходимости: «сохранись» и push
 ```
+
+### 9. Commit and push (on Apply of response.md)
+
+Do **not** ask for confirmation (no AskQuestion / no «ок»). Do **not** run `git commit` or `git push` from the agent during `/inbox`.
+
+Saving is handled by the project hook [`.cursor/hooks/inbox-commit-push.sh`](../../../.cursor/hooks/inbox-commit-push.sh) on `afterFileEdit` when `<case>/response/response.md` is written/Applied:
+
+1. Stages that `<case>/response/` (PDF + `response.md`; ignores `_pdf_pages/`).
+2. Commits: `Add agency response for <case-name>.`
+3. Pushes the current branch.
+
+In the report footer:
+
+- If at least one `response.md` was **created** in this run: remind the user — «Чтобы сохранить и запушить — Apply у `response.md`.»
+- If Agent auto-applies edits (no Apply UI): the hook runs on write; no extra action needed — still mention that commit/push goes through the hook.
+- If `response.md` was **not** created (already existed / skipped): say the hook will not fire for that case; suggest «сохранись» (and push) manually if they want those PDF-only changes saved.
+
+Limits:
+
+- One Apply / one write of `response.md` → one commit for that case’s `response/` folder.
+- Several cases in one `/inbox` run → several Applies → several commits.
+- Unrelated dirty files outside that `response/` are not included.
 
 ## Safety Rules
 
@@ -152,6 +178,7 @@ inbox/bar.pdf → … (score 55, низкая уверенность; совпа
 - Do not batch-process PDFs outside `inbox/` unless the user explicitly asks.
 - Do not route into legacy `answer/` folders automatically.
 - Do not silently overwrite existing `response.md` or duplicate PDFs in `response/`.
+- Do not commit or push from the agent during `/inbox`; leave that to the Apply/`afterFileEdit` hook.
 
 ## Expected User Phrases
 
