@@ -41,7 +41,7 @@ if git diff --cached --quiet; then
 fi
 
 case_name="$(basename "$(dirname "$response_dir")")"
-msg="Add agency response for ${case_name}."
+msg="Add agency response for ${case_name}"
 
 if ! git commit -m "$msg"; then
   echo "inbox-commit-push: commit failed for $response_dir" >&2

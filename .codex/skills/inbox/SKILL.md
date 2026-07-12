@@ -157,7 +157,7 @@ Do **not** ask for confirmation (no AskQuestion / no «ок»). Do **not** run `
 Saving is handled by the project hook [`.cursor/hooks/inbox-commit-push.sh`](../../../.cursor/hooks/inbox-commit-push.sh) on `afterFileEdit` when `<case>/response/response.md` is written/Applied:
 
 1. Stages that `<case>/response/` (PDF + `response.md`; ignores `_pdf_pages/`).
-2. Commits: `Add agency response for <case-name>.`
+2. Commits: `Add agency response for <case-name>`
 3. Pushes the current branch.
 
 In the report footer:
