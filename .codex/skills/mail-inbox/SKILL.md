@@ -46,6 +46,8 @@ Only citizen-appeal **response** emails:
 
 Download **only** `application/pdf` attachments. Skip ZIP «Документ с ЭП», `message/rfc822`, and other parts.
 
+Also skip a PDF whose filename is exactly `Направлен.pdf` (case-sensitive basename). In SEDO forwards this is usually a second attachment — a duplicate scan of the same letter already inside the mos.ru export PDF. Do not download it; keep only the mos.ru-named PDF (typically index `0`).
+
 ## Workflow
 
 ### 1. Search (metadata only — cheap)
@@ -68,11 +70,12 @@ If there are no matching emails — report and **do not** run `/inbox`.
 
 For every accepted message:
 
-1. `gmail_list_attachments` — pick the attachment whose `contentType` is PDF (often index `0`).
-2. `gmail_get_attachment` with `customPath` = absolute path to repo [`inbox/`](../../../inbox/).
-3. Strip the downloader timestamp prefix if present (`2026-07-12T13-39-11-825Z_…` → original mos.ru filename) so `/inbox` can parse `идентификатор： …`.
-4. `gmail_mark_email` with `read: true`.
-5. Move out of Inbox into `Mos Responses. Processed` (see label section below).
+1. `gmail_list_attachments` — collect PDF attachments (`contentType` starts with `application/pdf`).
+2. Skip any PDF whose basename is exactly `Направлен.pdf` (duplicate of the letter inside the mos.ru export). Note the skip in the report.
+3. Download each remaining PDF with `gmail_get_attachment` and `customPath` = absolute path to repo [`inbox/`](../../../inbox/). Prefer the mos.ru export (filename with `идентификатор：`); that is usually index `0`.
+4. Strip the downloader timestamp prefix if present (`2026-07-12T13-39-11-825Z_…` → original mos.ru filename) so `/inbox` can parse `идентификатор： …`.
+5. `gmail_mark_email` with `read: true`.
+6. Move out of Inbox into `Mos Responses. Processed` (see label section below).
 
 One email failing must not stop the rest — record the error and continue.
 
@@ -160,6 +163,7 @@ Per email:
 ```text
 Gmail <id> Fwd: Ответ № … на обращение гражданина
   PDF → inbox/<mos-ru-filename>.pdf
+  skip: Направлен.pdf (дубль)
   Gmail: read + Mos Responses. Processed
 ```
 
@@ -169,6 +173,7 @@ Then print the usual `/inbox` report (or explain skips / MCP / label errors).
 
 - Only process SEDO response emails as defined in Scope.
 - Only download PDF attachments.
+- Do not download `Направлен.pdf` — it duplicates the letter already in the mos.ru export.
 - Do not use the browser as a Gmail substitute when MCP is missing.
 - Do not run `/inbox` when this skill downloaded nothing.
 - Do not commit or push; leave that to the inbox hook after `response.md` Apply.
