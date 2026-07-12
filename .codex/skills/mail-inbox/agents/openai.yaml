@@ -1,0 +1,4 @@
+interface:
+  display_name: "Mail Inbox"
+  short_description: "Fetch SEDO response PDFs from Gmail into inbox and run /inbox"
+  default_prompt: "Use $mail-inbox to fetch agency response emails from Gmail into inbox and process them."

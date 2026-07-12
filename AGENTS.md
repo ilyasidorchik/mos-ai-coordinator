@@ -124,6 +124,9 @@ SVAO/pedestrian-crossings/otradnoye/
 Команда `/inbox`
 Разобрать PDF-файлы из папки `inbox/`: сопоставить с нужным кейсом, перенести в `response/` и расшифровать через skill `pdf-to-text`.
 
+Команда `/mail-inbox`
+Найти во входящих Gmail ответы SEDO (`sedo@mos.ru` и пересылки с темой «Ответ … на обращение гражданина»), скачать PDF в `inbox/`, пометить письма обработанными и затем выполнить `/inbox` (см. `.codex/skills/mail-inbox/SKILL.md`). Синонимы: «Разбери почту», «Process the mail», «Забери ответы из Gmail».
+
 См. остальные команды в `.codex/skills`. Для Cursor те же skills доступны через `.cursor/skills/` (симлинк на `.codex/skills/`).
 
 
