@@ -63,17 +63,24 @@ URL: `https://mos.ru/feedback/reception/`
 
 After navigate + lock, **before** filling the form, confirm the user is logged in to mos.ru **in Browser Tab** (session is separate from system Chrome/Safari).
 
-**Logged out** — any of these:
+**Logged out** — only an explicit login wall:
 
-- link or button «войдите в учетную запись» / «Войти»;
-- redirect to login / sudir / oauth page;
-- no personal account menu (e.g. no «Меню пользователя» with an active session);
-- click «Отправить обращение» leads to authorization instead of the form.
+- heading or banner «Войдите в личный кабинет»;
+- button «Войти в личный кабинет»;
+- close variants of the same sense («войдите … в личный кабинет»);
+- redirect to login / sudir / oauth.
 
-**Logged in** — typically:
+If unsure on the landing page, click «Отправить обращение» and check whether that banner appears.
 
-- «Меню пользователя» (or equivalent account control) is present;
-- after «Отправить обращение», the recipient/applicant flow opens without a login wall;
+**Do not treat as logged out:**
+
+- the link «войдите в учетную запись» in the block «Как подать обращение от организации» — it is present for logged-in users too;
+- absence of «Меню пользователя» alone.
+
+**Logged in:**
+
+- no «Войдите в личный кабинет» banner on the reception page;
+- after «Отправить обращение», the recipient / applicant flow opens, not the login wall;
 - on the applicant step, full name and email from the account are shown.
 
 If logged out:
