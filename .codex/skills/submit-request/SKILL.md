@@ -22,9 +22,10 @@ Agent fills the form; **user attaches photos manually** — CDP file upload is b
 Before starting, verify:
 
 1. **Browser Tab** enabled: Settings → Tools & MCP → Browser Automation → Browser Tab.
-2. User is **logged in to mos.ru in Browser Tab** (not system Chrome/Safari — sessions are separate).
-3. Photos in `request/photos/` are each **under 5 MB** (run `compress-photo` if needed).
-4. `request.md` is ready (`prepare-request` if user asked for editorial pass).
+2. Photos in `request/photos/` are each **under 5 MB** (run `compress-photo` if needed).
+3. `request.md` is ready (`prepare-request` if user asked for editorial pass).
+
+Login is **not** assumed from prerequisites — always verify it in Step 0 after opening the page.
 
 If Browser Tab tools are unavailable, stop and tell the user to enable Browser Tab and authorize in it.
 
@@ -57,6 +58,34 @@ If the short name is unknown, ask the user for the search string before continui
 Follow `cursor-ide-browser` lock order: `browser_tabs` → `browser_navigate` → `browser_lock` → interactions → `browser_unlock`.
 
 URL: `https://mos.ru/feedback/reception/`
+
+### Step 0 — Login check (required)
+
+After navigate + lock, **before** filling the form, confirm the user is logged in to mos.ru **in Browser Tab** (session is separate from system Chrome/Safari).
+
+**Logged out** — any of these:
+
+- link or button «войдите в учетную запись» / «Войти»;
+- redirect to login / sudir / oauth page;
+- no personal account menu (e.g. no «Меню пользователя» with an active session);
+- click «Отправить обращение» leads to authorization instead of the form.
+
+**Logged in** — typically:
+
+- «Меню пользователя» (or equivalent account control) is present;
+- after «Отправить обращение», the recipient/applicant flow opens without a login wall;
+- on the applicant step, full name and email from the account are shown.
+
+If logged out:
+
+1. `browser_lock` → `unlock`.
+2. Stop automation. Hand control to the user.
+3. Tell them clearly:
+
+> Войдите в mos.ru в **Browser Tab** (не в обычном браузере). Когда войдёте и снова откроется электронная приёмная, напишите «вошёл» / «продолжай».
+
+4. Do **not** continue with recipient selection or form fill until the user confirms.
+5. After confirmation: lock again, re-check Step 0 (snapshot/CDP). If still logged out, hand off once more. Only then proceed to Step 1.
 
 ### Step 1 — Recipient
 
@@ -121,7 +150,7 @@ Example:
 - Default: **do not submit** without explicit user approval.
 - Do not manually reconstruct appeal text for the form. Preserve typography from `request.md`, especially non-breaking spaces.
 - Do not invent appeal numbers, addresses, or agency names.
-- If login is required, unlock browser and ask user to sign in in Browser Tab.
+- **Always run Step 0.** If not logged in, unlock Browser Tab and hand off — do not guess credentials or automate login.
 - If captcha fails, report and retry once; then ask user to help.
 - After four failed actions on the same step, stop and report blocker + suggested next step.
 
@@ -129,13 +158,15 @@ Example:
 
 - `Отправь обращение` / `Подай обращение на mos.ru`
 - `Заполни форму из @case/request/request.md`
+- `Вошёл` / `Продолжай` — after manual mos.ru login in Browser Tab
 - `Продолжай` / `Фото приложены` / `Готово` — after manual photo upload
 - `Отправляй` / `Можно отправлять` — permission to submit
 
 ## Report to user
 
-When done (or paused for photos), summarize:
+When done (or paused for login/photos), summarize:
 
+- login status (Step 0);
 - current form step;
 - what was filled (recipient, theme, address);
 - photo handoff status;
