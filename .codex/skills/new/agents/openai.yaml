@@ -1,0 +1,4 @@
+interface:
+  display_name: "New Appeal"
+  short_description: "Create case folder structure for a new or repeat appeal"
+  default_prompt: "Use $new to create the appeal case folder structure from my description."

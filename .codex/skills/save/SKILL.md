@@ -1,0 +1,88 @@
+---
+name: save
+description: >-
+  Commits all current changes and pushes to remote. Use when the user mentions
+  /save, «Сохранись», «закоммить и запушь», or asks to save the work to git.
+disable-model-invocation: true
+---
+
+# Save (commit + push)
+
+## Overview
+
+Commit every current change in the repo, then `git push`. Commit message:
+English, short — reflect what this iteration did.
+
+## Workflow
+
+### 1. Inspect
+
+In parallel:
+
+- `git status`
+- `git diff` (staged and unstaged)
+- `git log -5 --oneline` (match message style)
+
+### 2. Nothing to commit?
+
+- If the working tree is clean and the branch is already synced with remote —
+  say so briefly; do not push for the sake of pushing.
+- If the working tree is clean but there are unpushed commits — only `git push`.
+
+### 3. Commit
+
+1. Stage all relevant changes (`git add`). Skip secrets (`.env`, credentials,
+   tokens). Warn if the user explicitly asked to include them.
+2. Draft a short English commit message from the diff and recent style.
+3. Commit via HEREDOC:
+
+```bash
+git commit -m "$(cat <<'EOF'
+Commit message here.
+
+EOF
+)"
+```
+
+### 4. Push
+
+- `git push`
+- If the branch has no upstream: `git push -u origin HEAD`
+- Then confirm with `git status`
+
+### 5. Report
+
+Briefly: what was committed (message), and that it was pushed (or only pushed /
+nothing to do).
+
+## On failure
+
+Do **not** run force-push, amend, rebase, or config changes unless the user
+explicitly asks. Explain the problem in simple language (Russian is fine) and
+offer options:
+
+| Symptom | Plain explanation | Options |
+| --- | --- | --- |
+| Nothing to commit | Everything is already saved | Stop, or push only if there are unpushed commits |
+| Hook rejected the commit | A pre-commit check failed | Fix what the hook reported, then make a **new** commit (do not amend unless the user asks and amend rules allow it) |
+| Network / auth error | Could not reach the remote or log in | Check internet; `gh auth login` / SSH keys; retry later |
+| Rejected (non-fast-forward) | Remote has commits you do not have locally | `git pull --rebase`, then push; or sort it out together |
+| No upstream | Branch is not linked to remote yet | `git push -u origin HEAD` |
+| Merge conflict | Local and remote edits overlap | Resolve conflicts with the user, then commit and push |
+
+## Expected user phrases
+
+- `/save`
+- `Сохранись`
+- `Закоммить и запушь`
+
+## Safety rules
+
+- Never update git config.
+- Never `--force` / `--force-with-lease` to `main` / `master` unless the user
+  explicitly requests it (and warn first).
+- Never skip hooks (`--no-verify`).
+- Never amend unless the user explicitly asks **and** the usual amend safety
+  conditions hold (commit is yours, not pushed, etc.).
+- If a hook fails the commit — fix and create a **new** commit; do not amend.
+- Do not push if commit failed.

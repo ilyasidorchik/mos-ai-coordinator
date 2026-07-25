@@ -1,0 +1,4 @@
+interface:
+  display_name: "Save"
+  short_description: "Commit all changes and push to remote"
+  default_prompt: "Use $save to commit all current changes and push to remote."

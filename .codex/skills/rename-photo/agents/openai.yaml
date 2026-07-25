@@ -1,0 +1,4 @@
+interface:
+  display_name: "Rename Photo"
+  short_description: "Rename appeal photos to topic_YYYY-MM-DD_HH-MM"
+  default_prompt: "Use $rename-photo to rename the specified photo(s) to the project naming convention."
