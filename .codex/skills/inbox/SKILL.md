@@ -17,7 +17,8 @@ Process official response PDFs dropped into [`inbox/`](../../../inbox/):
 1. Match each PDF to the right case.
 2. Move it to `<case>/response/`.
 3. Run the [`pdf-to-text`](../pdf-to-text/SKILL.md) workflow for that file.
-4. Report; after the user Applies `response.md`, the project hook commits and pushes.
+4. Update [`statistics.md`](../../../statistics.md).
+5. Report; after the user Applies `response.md`, the project hook commits and pushes.
 
 Do not duplicate transcription logic here — always delegate step 3 to `pdf-to-text`.
 
@@ -133,7 +134,21 @@ After a successful move:
    - do not silently overwrite existing `response.md`
    - delete `response/_pdf_pages/` after transcription
 
-### 8. Report
+### 8. Update statistics.md
+
+At the end of the run — after all PDFs were processed (move + `pdf-to-text`) — update [`statistics.md`](../../../statistics.md). Skip this step if no PDF was successfully moved.
+
+1. Open `statistics.md`.
+2. **Ответов получено:** add `+1` for each PDF successfully moved to a case in this run. Do **not** count PDFs left in `inbox/` or skipped due to a name conflict in `response/`.
+3. **Меры:** for each successfully moved PDF, read the response text (`response.md` if created or already present; otherwise the PDF text from step 3) and decide whether measures were taken. Count as measures: disciplinary action, driver review/sanctions, inclusion in a works project, concrete follow-up to a balance holder, or other explicit agency actions beyond a refusal / brush-off. Do **not** count pure refusal, «учтем», or «направлено на рассмотрение» with no outcome.
+4. If measures were found:
+   - add `+1` to **Мер принято** (or `+N` if one response clearly contains several independent measures — same style as «Автобус 688 ×2»);
+   - append a bullet under `## Принятые меры` in the existing style: short, location/object — essence of the measure.
+5. If no measures — leave the measures counter and list unchanged.
+6. Do **not** change **Обращений подано** (out of scope for `/inbox`).
+7. Do **not** commit or push `statistics.md` from the agent; leave that to Apply / «сохранись».
+
+### 9. Report
 
 For each PDF:
 
@@ -150,7 +165,17 @@ inbox/bar.pdf → … (score 55, низкая уверенность; совпа
   hook не сработает — при необходимости: «сохранись» и push
 ```
 
-### 9. Commit and push (on Apply of response.md)
+At the end of the report, one line about `statistics.md`, for example:
+
+```text
+statistics.md: Ответов получено 24→25; мер нет
+```
+
+```text
+statistics.md: Ответов получено 24→25; Мер принято 5→6; + «Вересковая улица — доп. пешеходный переход в проекте»
+```
+
+### 10. Commit and push (on Apply of response.md)
 
 Do **not** ask for confirmation (no AskQuestion / no «ок»). Do **not** run `git commit` or `git push` from the agent during `/inbox`.
 
@@ -160,11 +185,14 @@ Saving is handled by the project hook [`.cursor/hooks/inbox-commit-push.sh`](../
 2. Commits: `Add agency response for <case-name>`
 3. Pushes the current branch.
 
+The hook does **not** include `statistics.md`. To save it, use «сохранись» (or commit manually) after Apply.
+
 In the report footer:
 
 - If at least one `response.md` was **created** in this run: remind the user — «Чтобы сохранить и запушить — Apply у `response.md`.»
 - If Agent auto-applies edits (no Apply UI): the hook runs on write; no extra action needed — still mention that commit/push goes through the hook.
 - If `response.md` was **not** created (already existed / skipped): say the hook will not fire for that case; suggest «сохранись» (and push) manually if they want those PDF-only changes saved.
+- If `statistics.md` was updated: remind that it is not in the hook commit — «сохранись», if they want it saved.
 
 Limits:
 
@@ -178,7 +206,9 @@ Limits:
 - Do not batch-process PDFs outside `inbox/` unless the user explicitly asks.
 - Do not route into legacy `answer/` folders automatically.
 - Do not silently overwrite existing `response.md` or duplicate PDFs in `response/`.
-- Do not commit or push from the agent during `/inbox`; leave that to the Apply/`afterFileEdit` hook.
+- Do not invent measures or change statistics counters except from successfully processed responses in this run.
+- Do not change **Обращений подано** from `/inbox`.
+- Do not commit or push from the agent during `/inbox`; leave that to the Apply/`afterFileEdit` hook (and «сохранись» for `statistics.md`).
 
 ## Expected User Phrases
 
