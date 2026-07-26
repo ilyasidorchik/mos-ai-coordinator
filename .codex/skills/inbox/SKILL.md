@@ -43,7 +43,7 @@ Scan the repo for folders with `request/request.md` or `request/request.txt`. Fo
 | `locations` | streets, addresses, districts, metro stations, bus stops/ОРП from title and text |
 | `topics` | subject: «выделенная полоса», «пешеходный переход», «разметка СИМ», «интервал движения», etc. |
 
-**Exclude** legacy cases that use `answer/` instead of `response/` (e.g. `SVAO/bus605/`). If the user points to such a case explicitly, handle it manually.
+Route only into cases that use `response/` (etalon layout). Do not invent a case path for unmatched PDFs.
 
 Normalization for comparison: lower-case, `ё→е`, collapse whitespace, strip NBSP, replace `∕` with `/`.
 
@@ -204,7 +204,6 @@ Limits:
 
 - Process PDFs from `inbox/` only in v1.
 - Do not batch-process PDFs outside `inbox/` unless the user explicitly asks.
-- Do not route into legacy `answer/` folders automatically.
 - Do not silently overwrite existing `response.md` or duplicate PDFs in `response/`.
 - Do not invent measures or change statistics counters except from successfully processed responses in this run.
 - Do not change **Обращений подано** from `/inbox`.
