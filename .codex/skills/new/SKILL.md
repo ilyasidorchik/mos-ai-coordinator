@@ -2,8 +2,10 @@
 name: new
 description: >-
   Creates folder structure for a new Moscow agency appeal case (or the next
-  attempt-N in a series). Does not draft text until the user agrees. Use when
-  the user mentions /new, «Создай обращение», «Новое обращение», or «Заведи кейс».
+  attempt-N in a series). By default does not draft text until the user agrees;
+  if the prompt contains «по шаблону», drafts immediately from the supplied
+  template. Use when the user mentions /new, «Создай обращение»,
+  «Новое обращение», or «Заведи кейс».
 disable-model-invocation: true
 ---
 
@@ -11,13 +13,15 @@ disable-model-invocation: true
 
 ## Overview
 
-Create the case folder and a stub `request.md`. Do **not** write the appeal body
-in the first pass.
+Create the case folder and a stub `request.md`.
 
 1. Resolve district / topic / case name (and whether this is a repeat).
 2. Create the correct folder structure.
 3. Find 1–2 similar cases and link them.
-4. Ask whether to draft into the new `request.md`.
+4. Drafting:
+   - Default: ask whether to draft into the new `request.md`.
+   - If the user message contains **«по шаблону»**: fill `request.md` immediately
+     from the template in the prompt — do **not** ask about drafting.
 
 Follow structure and naming from [`AGENTS.md`](../../../AGENTS.md). Series
 journal format: [`SVAO/pedestrian-crossings/zapovednaya/`](../../../SVAO/pedestrian-crossings/zapovednaya/).
@@ -35,6 +39,7 @@ From the user message and open context extract:
 | Case name | Latin, kebab-case, short; no `attempt` in the name |
 | Agency hint | Default Дептранс unless the user names another |
 | Repeat? | Link to an existing case, prior appeal number, «повторно», «в ответ на…», «следующая итерация», open `response/response.md` |
+| Template? | Phrase «по шаблону» → draft immediately from the template in the prompt |
 
 If district, topic, or case name is ambiguous — ask **one** clarifying question.
 Do not invent a path.
@@ -81,20 +86,30 @@ Write only the labels — no title text, no body, no invented appeal numbers:
 
 Leave `photos/` empty. Do not add `.gitkeep` unless the repo already uses it for that case.
 
+If the prompt contains **«по шаблону»**, skip leaving an empty stub: after creating
+folders, immediately fill `Заголовок:` and `Текст:` (see «When drafting»).
+
 ### 4. Report and ask
 
 1. Tell the user the created path (and if the case was converted to a series).
 2. Find **1–2 similar** cases in the repo (same topic, location, or problem type). Prefer reading nearby `request.md` titles. Give relative links to those `request.md` files or case roots.
-3. Ask exactly (or very close):
+3. Drafting branch:
+   - **«по шаблону»** in the user message: draft into `request.md` now from the
+     supplied template (adapt location/facts from the prompt). Do **not** ask
+     whether to draft.
+   - Otherwise ask exactly (or very close):
 
 > Набросать черновик прямо в созданный `request.md`?
 
-## After the user agrees to draft
+## When drafting
 
-Only then fill `Заголовок:` and `Текст:` in the stub.
+Fill `Заголовок:` and `Текст:` after the user agrees to draft, **or** immediately
+when the prompt contains **«по шаблону»**.
 
 - Tone and structure: [`AGENTS.md`](../../../AGENTS.md).
 - Use the similar cases as style examples.
+- For «по шаблону»: follow the user’s template closely; substitute the concrete
+  location, dates, and facts from the prompt — do not invent details absent there.
 - For a series: read prior `attempt-*/request/request.md` and `response/response.md`; argue from real replies, do not invent реквизиты.
 - Do **not** run `prepare-request` / `typograf` unless the user asks.
 - Leave `Номера обращений:` empty until submission assigns a number.
@@ -106,6 +121,7 @@ Only then fill `Заголовок:` and `Текст:` in the stub.
 - `Новое обращение`
 - `Заведи кейс`
 - Affirmative reply after the draft question → write the draft
+- «по шаблону» (with a template in the prompt) → write the draft immediately, no ask
 
 ## Safety rules
 
