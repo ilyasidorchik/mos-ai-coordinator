@@ -50,8 +50,18 @@ Also read `request/photos/` — list every file to attach. Derive address hint f
 | Дептранс | `Департамент транспорта` |
 | ДКР | `Департамент капитального ремонта` |
 | ЦОДД | `Центр организации дорожного движения` |
+| Правительство Москвы | `Правительство Москвы` |
 
-If the short name is unknown, ask the user for the search string before continuing.
+Choose **Правительство Москвы** (the executive authority of the same name in the recipient picker — not a department) when:
+
+- `Номера обращений:` is empty or has no known short name from the table;
+- short name is `Правительство Москвы`;
+- the appeal text addresses the Government of Moscow (e.g. «Уважаемое Правительство Москвы»);
+- the user says they do not know which body to contact, or explicitly names Правительство Москвы.
+
+On mos.ru the form itself hints: if you do not know the executive body, select «Правительство Москвы».
+
+Only ask the user for a search string when the short name is not in the table **and** it is not a «unknown / Правительство Москвы» case (e.g. a rare label like `ОАТИ`).
 
 ## Browser workflow
 
@@ -97,7 +107,7 @@ If logged out:
 ### Step 1 — Recipient
 
 1. Click «Выбрать получателя» / «Отправить обращение» if on landing page.
-2. Fill search with agency string from table above.
+2. Fill search with agency string from table above. For Правительство Москвы use search `Правительство Москвы` and select that organ’s radio/label — not ДЖКХ, Дептранс, or another department.
 3. Select the matching row. If radio buttons do not respond to `browser_click` (hidden inputs), use `browser_cdp` → `Runtime.evaluate` to click the radio or its label.
 4. Confirm selection («Выбрать») and click «Продолжить».
 
@@ -145,11 +155,16 @@ After user confirms photos:
 5. After successful submit, copy the appeal number from the confirmation page.
 6. Write it to `request.md` under `Номера обращений:` in format `<number> <agency>`, preserving existing numbers on separate lines if this is a repeat appeal.
 
-Example:
+Examples:
 
 ```markdown
 Номера обращений:
 57749568 Дептранс
+```
+
+```markdown
+Номера обращений:
+578xxxxx Правительство Москвы
 ```
 
 ## Safety rules
