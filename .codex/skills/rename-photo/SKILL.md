@@ -2,9 +2,10 @@
 name: rename-photo
 description: >-
   Renames appeal photos to the project naming convention:
-  topic_YYYY-MM-DD_HH-MM[.ext] with collision suffixes. Use when the user asks
-  to rename photos, mentions /rename-photo, «Переименуй фото», or «Приведи имена
-  фото к формату».
+  topic_YYYY-MM-DD_HH-MM[.ext] with collision suffixes; map screenshots
+  (map / yandex-maps / google-maps) become topic_{token} without reading
+  metadata. Use when the user asks to rename photos, mentions /rename-photo,
+  «Переименуй фото», or «Приведи имена фото к формату».
 disable-model-invocation: true
 ---
 
@@ -19,14 +20,23 @@ Typical paths: `request/photos/` inside a case folder.
 
 ## Canon
 
+Photos (with capture time):
+
 ```text
 {topic}_{YYYY-MM-DD}_{HH-MM}[_{n}].{ext}
 ```
 
+Map screenshots (no date):
+
+```text
+{topic}_{map-token}[_{n}].{ext}
+```
+
 - `topic` — short Latin kebab-case label (e.g. `otradnoye-zebra`, `zebra-zapovednaya`)
-- Date and time — when the photo was taken
+- Date and time — when the photo was taken (ordinary photos only)
 - Time uses a hyphen (`18-03`), never a colon (`18:03`)
-- Same moment, several files — add `_2`, `_3`, … before the extension
+- `map-token` — from the source basename: `map`, `yandex-maps`, or `google-maps`
+- Same moment or same map-token, several files — add `_2`, `_3`, … before the extension
 - Extension — keep the real type; write it in lower-case (`.jpeg`, `.jpg`, `.png`)
 
 Examples:
@@ -34,6 +44,7 @@ Examples:
 - `otradnoye-zebra_2026-02-10_18-03.jpeg`
 - `otradnoye-zebra_2026-02-10_18-03_2.jpeg`
 - `anokhina-66-bus-stuck_2025-09-12_17-40.jpeg`
+- `mirax-park-anokhina-entrance_yandex-maps.jpeg`
 
 ## Workflow
 
@@ -55,9 +66,25 @@ Examples:
 
 If the topic is ambiguous — ask once.
 
-### 3. Read date and time
+### 3. Detect map screenshots
 
-For each file, in order:
+For each file, look at the basename without extension (case-insensitive).
+
+If it is exactly `map`, `yandex-maps`, or `google-maps`:
+
+- Do **not** read EXIF, birth time, or mtime.
+- Target name: `{topic}_{map-token}.{ext}` where `map-token` is that stem in
+  lower-case (`map` / `yandex-maps` / `google-maps`) and `ext` is lower-case.
+- If the name already matches this canon for the topic (and optional `_n`
+  suffix), skip.
+- On collision with an existing different file, append `_2`, `_3`, … until free.
+- In the report, note the name source as `map-token`.
+
+Skip step 4 for these files; go to rename (step 5).
+
+### 4. Read date and time
+
+For non-map files, in order:
 
 1. EXIF `DateTimeOriginal`, then `CreateDate` (via `exiftool` if available, else
    macOS `mdls` / equivalent).
@@ -65,20 +92,22 @@ For each file, in order:
 
 Format as `YYYY-MM-DD_HH-MM`. Note the source (`EXIF` / `birth` / `mtime`) in the report.
 
-### 4. Rename in place
+### 5. Rename in place
 
 Build the target name and `mv` within the same directory.
 
-- If the name already matches the canon for this topic and timestamp (and optional
-  suffix), skip.
+- If the name already matches the applicable canon for this topic (timestamp or
+  map-token, and optional suffix), skip.
 - On collision with an existing different file, append `_2`, `_3`, … until free.
-  The first file at a given timestamp keeps no numeric suffix; the next ones start at `_2`.
+  The first file at a given timestamp or map-token keeps no numeric suffix; the
+  next ones start at `_2`.
 - Do not create copies; only rename.
 - Do not change pixels, EXIF, or file contents.
 
-### 5. Report
+### 6. Report
 
-List each change as `old → new` and the date source. Mention skips briefly.
+List each change as `old → new` and the name source (`EXIF` / `birth` /
+`mtime` / `map-token`). Mention skips briefly.
 
 ## Expected user phrases
 
