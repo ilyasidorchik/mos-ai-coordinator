@@ -62,7 +62,8 @@ ensure_node16() {
 }
 
 squoosh_cli() {
-  "${NODE_BIN}" "${NPX_CLI}" --yes @squoosh/cli "$@"
+  # npx may spawn the package via `env node`; keep Node 16 first on PATH
+  PATH="${NODE_DIR}/bin:${PATH}" "${NODE_BIN}" "${NPX_CLI}" --yes @squoosh/cli "$@"
 }
 
 compress_once() {
