@@ -21,6 +21,7 @@ End the reply with a link to `request.md` and open it in the editor.
 4. Immediately fill `Заголовок:` and `Текст:` in `request.md` (do **not** ask
    whether to draft). If the prompt contains **«по шаблону»**, follow that
    template.
+5. Update [`statistics.md`](../../../statistics.md): **Обращений подано** `+1`.
 
 Follow structure and naming from [`AGENTS.md`](../../../AGENTS.md). Series
 journal format: [`SVAO/pedestrian-crossings/zapovednaya/`](../../../SVAO/pedestrian-crossings/zapovednaya/).
@@ -97,9 +98,23 @@ Leave `photos/` empty. Do not add `.gitkeep` unless the repo already uses it for
 4. After writing `request.md`, open it in the editor:
    `cursor -g "<repo-relative-or-absolute-path-to-request.md>"`
    If the command fails, continue; the chat link is enough.
-5. End the user-facing reply with a markdown link to the created
+5. Update statistics (step 5 below).
+6. End the user-facing reply with a markdown link to the created
    `request.md` (repo-relative path), e.g.
    `[request.md](UVAO/cycling/sovkhoznaya-cycle-stop/request/request.md)`.
+   Include one line about `statistics.md`, for example:
+   `statistics.md: Обращений подано 38→39`.
+
+### 5. Update statistics.md
+
+After the case folder and draft `request.md` exist successfully:
+
+1. Open [`statistics.md`](../../../statistics.md).
+2. **Обращений подано:** add `+1` for each successfully created case or series iteration in this run (new single-case `request/` or new `attempt-N`).
+3. Do **not** change **Ответов получено** or **Мер принято**.
+4. Do **not** commit or push `statistics.md`; leave that to Apply / «сохранись».
+
+Skip this step if no case was created (e.g. only a clarifying question).
 
 ## When drafting
 
@@ -128,4 +143,6 @@ Always fill `Заголовок:` and `Текст:` as part of `/new`.
 - Do not run `prepare-request` / `typograf` before there is appeal text.
 - Do not invent appeal numbers, dates, or agency reply реквизиты.
 - Do not rewrite an already sent `request.md` from a previous attempt.
+- Do not bump **Обращений подано** if the case was not created.
+- Do not change **Ответов получено** or **Мер принято** from `/new`.
 - Do not commit unless the user says `/save` or «Сохранись».
