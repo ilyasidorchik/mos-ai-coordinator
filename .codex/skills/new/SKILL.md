@@ -70,11 +70,14 @@ Never create sibling folders like `case-attempt-2`.
 ### 3. Write `request.md`
 
 Use this skeleton and fill `Заголовок:` and `Текст:` in the same pass (see
-«When drafting»). Leave appeal numbers empty — no invented numbers:
+«When drafting»). Put the agency short name under `Номера обращений:` from
+Agency hint (default `Дептранс`; if the user names another — its short name).
+Do not invent appeal numbers. For several agencies — one short name per line,
+still without numbers:
 
 ```markdown
 Номера обращений:
-
+Дептранс
 
 Заголовок:
 
@@ -101,7 +104,8 @@ Always fill `Заголовок:` and `Текст:` as part of `/new`.
   location, dates, and facts from the prompt — do not invent details absent there.
 - For a series: read prior `attempt-*/request/request.md` and `response/response.md`; argue from real replies, do not invent реквизиты.
 - Do **not** run `prepare-request` / `typograf` unless the user asks.
-- Leave `Номера обращений:` empty until submission assigns a number.
+- Put the agency short name under `Номера обращений:` immediately (default
+  `Дептранс`). Add the appeal number only after submission assigns one.
 
 ## Expected user phrases
 
