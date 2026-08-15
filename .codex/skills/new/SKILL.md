@@ -13,6 +13,7 @@ disable-model-invocation: true
 ## Overview
 
 Create the case folder and draft `request.md` in the same pass.
+End the reply with a link to `request.md` and open it in the editor.
 
 1. Resolve district / topic / case name (and whether this is a repeat).
 2. Create the correct folder structure.
@@ -93,6 +94,12 @@ Leave `photos/` empty. Do not add `.gitkeep` unless the repo already uses it for
 1. Tell the user the created path (and if the case was converted to a series).
 2. Find **1–2 similar** cases in the repo (same topic, location, or problem type). Prefer reading nearby `request.md` titles. Give relative links to those `request.md` files or case roots.
 3. Immediately draft into `request.md`. If the prompt contains **«по шаблону»**, follow the supplied template (adapt location/facts from the prompt). Do **not** ask whether to draft.
+4. After writing `request.md`, open it in the editor:
+   `cursor -g "<repo-relative-or-absolute-path-to-request.md>"`
+   If the command fails, continue; the chat link is enough.
+5. End the user-facing reply with a markdown link to the created
+   `request.md` (repo-relative path), e.g.
+   `[request.md](UVAO/cycling/sovkhoznaya-cycle-stop/request/request.md)`.
 
 ## When drafting
 
