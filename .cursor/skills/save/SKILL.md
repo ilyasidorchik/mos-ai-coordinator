@@ -11,7 +11,30 @@ disable-model-invocation: true
 ## Overview
 
 Commit every current change in the repo, then `git push`. Commit message:
-English, short — reflect what this iteration did.
+English, short — follow **Commit message rules** below.
+
+## Commit message rules
+
+- New submitted appeal (`request/request.md` or `attempt-N/request/request.md`
+  new or substantially updated in this commit, with a numeric id under
+  `Номера обращений:`):
+
+  ```text
+  Add request #<id> about <English paraphrase of Заголовок>
+  ```
+
+- Take `<id>` from the agency line; if several agencies are listed, prefer the
+  Дептранс id, otherwise the first numeric id in the block. Do **not** invent
+  an id. If the block has only an agency name and no number — do not use this
+  template; use a free-form English message.
+- English part: short paraphrase of the `Заголовок:` field only (not `Текст:`);
+  no quotes, no trailing period, no filler words.
+- If the same commit also has side changes (e.g. a district folder rename),
+  still lead the subject with the request template; do not inflate the subject
+  with secondary items.
+- Other primary change types (agency response, photos-only, skills, renames as
+  the main change, draft without a number): free-form English message matching
+  recent `git log` style.
 
 ## Workflow
 
@@ -21,7 +44,7 @@ In parallel:
 
 - `git status`
 - `git diff` (staged and unstaged)
-- `git log -5 --oneline` (match message style)
+- `git log -5 --oneline` (match message style for non-template cases)
 
 ### 2. Nothing to commit?
 
@@ -33,7 +56,7 @@ In parallel:
 
 1. Stage all relevant changes (`git add`). Skip secrets (`.env`, credentials,
    tokens). Warn if the user explicitly asked to include them.
-2. Draft a short English commit message from the diff and recent style.
+2. Draft the commit message using **Commit message rules**.
 3. Commit via HEREDOC:
 
 ```bash
