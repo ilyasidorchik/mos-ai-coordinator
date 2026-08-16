@@ -6,10 +6,11 @@
 
 ## Текущий статус
 
-Отправлено — [cycle-lane/attempt-1-deptrans](cycle-lane/attempt-1-deptrans/), № 57258340. Ответ пока не зафиксирован.
+Отправлено 07.01.2026 — [cycle-lane/attempt-2-depgrad](cycle-lane/attempt-2-depgrad/), № 57258336 (Депград). Также [cycle-lane/attempt-1-deptrans](cycle-lane/attempt-1-deptrans/), № 57258340 (Дептранс). Ответы пока не зафиксированы.
 
 ## Хронология
 
 | Итерация | Обращение | Ответ | Итог |
 | --- | --- | --- | --- |
 | [cycle-lane/attempt-1-deptrans](cycle-lane/attempt-1-deptrans/) | 57258340 | — | Отправлено |
+| [cycle-lane/attempt-2-depgrad](cycle-lane/attempt-2-depgrad/) | 57258336 | — | Отправлено 07.01.2026 |
