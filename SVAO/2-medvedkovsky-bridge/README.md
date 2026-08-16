@@ -6,11 +6,11 @@
 
 ## Текущий статус
 
-Отправлено 07.01.2026 — [cycle-lane/attempt-2-depgrad](cycle-lane/attempt-2-depgrad/), № 57258336 (Депград). Также [cycle-lane/attempt-1-deptrans](cycle-lane/attempt-1-deptrans/), № 57258340 (Дептранс). Ответы пока не зафиксированы.
+Ответ Депграда 03.03.2026 № ДГП-04-112/26-1 — [cycle-lane/attempt-2-depgrad](cycle-lane/attempt-2-depgrad/): существующий мост не реконструируют, планируют второй параллельный; велосеть вдоль Кольской, на существующем мосту — совмещённое движение. Ответ Дептранса 22.01.2026 № 17-65-165/26 — [cycle-lane/attempt-1-deptrans](cycle-lane/attempt-1-deptrans/): вопрос в ведении Комплекса градостроительной политики.
 
 ## Хронология
 
 | Итерация | Обращение | Ответ | Итог |
 | --- | --- | --- | --- |
-| [cycle-lane/attempt-1-deptrans](cycle-lane/attempt-1-deptrans/) | 57258340 | — | Отправлено |
-| [cycle-lane/attempt-2-depgrad](cycle-lane/attempt-2-depgrad/) | 57258336 | — | Отправлено 07.01.2026 |
+| [cycle-lane/attempt-1-deptrans](cycle-lane/attempt-1-deptrans/) | 57258340 | 22.01.2026 № 17-65-165/26 | Нужна комплексная реконструкция; планировка — у Комплекса градостроительной политики |
+| [cycle-lane/attempt-2-depgrad](cycle-lane/attempt-2-depgrad/) | 57258336 | 03.03.2026 № ДГП-04-112/26-1 | ППТ утверждён: второй мост, велосеть вдоль Кольской, на существующем — совмещённое движение |
