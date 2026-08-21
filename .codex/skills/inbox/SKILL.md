@@ -18,7 +18,7 @@ Process official response PDFs dropped into [`inbox/`](../../../inbox/):
 2. Move it to `<case>/response/`.
 3. Run the [`pdf-to-text`](../pdf-to-text/SKILL.md) workflow for that file.
 4. Update [`statistics.md`](../../../statistics.md).
-5. Report; after the user Applies `response.md`, the project hook commits and pushes.
+5. Report; after the user Applies `response.md`, the project hook commits and pushes (`response/` and dirty `statistics.md`).
 
 Do not duplicate transcription logic here — always delegate step 3 to `pdf-to-text`.
 
@@ -110,9 +110,9 @@ See [reference.md](reference.md) for real matching examples.
 **Selection rules:**
 
 - Always pick the case with the **highest total score** and move there.
-- If score < 50 **or** gap to second place < 15 — flag «низкая уверенность», show 2–3 alternatives with scores and what matched, but still move to the best guess.
+- If score < 50 **or** gap to second place < 15 — flag «низкая уверенность» in the report (short note + 2–3 alternatives after that list item), but still move to the best guess.
 - If score = 0 — leave PDF in `inbox/`, explain why, continue to the next file.
-- In the report, list match types: `mos_id`, `заголовок`, `содержание: локация+тема`, `содержание: incoming_ref`, etc.
+- Scoring signals (`mos_id`, `заголовок`, локация+тема, …) are for matching only — do **not** put score lines in the normal user report.
 
 ### 6. Move PDF
 
@@ -146,34 +146,56 @@ At the end of the run — after all PDFs were processed (move + `pdf-to-text`) �
    - append a bullet under `## Принятые меры` in the existing style: short, location/object — essence of the measure.
 5. If no measures — leave the measures counter and list unchanged.
 6. Do **not** change **Обращений подано** (out of scope for `/inbox`).
-7. Do **not** commit or push `statistics.md` from the agent; leave that to Apply / «сохранись».
+7. Do **not** commit or push `statistics.md` from the agent during `/inbox` — the Apply hook stages it together with `response/` when dirty (see §10).
 
 ### 9. Report
 
-For each PDF:
+Do **not** wrap the user-facing report in a fenced `text` / code block — Markdown links must stay clickable.
 
-```text
-inbox/foo.pdf → ZAO/troparyovo/anokhina bus lane/response/ (score 185: заголовок + содержание: локация+тема)
-  response.md: создан
+Do **not** use the old technical lines (`inbox/foo.pdf → … (score …)`, `response.md: создан`).
 
-Чтобы сохранить и запушить — Apply у `response.md`.
+Structure:
+
+1. Heading: `Сохранённые ответы:`
+2. One bullet per successfully processed PDF (moved to a case):
+
+```markdown
+- [16-я Парковая, 35 — Мосводосток заменил решётку](VAO/bike-friendly-drain-grates/16-th-parkovaya-35/response/response.md)
 ```
 
-```text
-inbox/bar.pdf → … (score 55, низкая уверенность; совпала только тема «пешеходный переход»; альтернативы: vereskovaya 50, dezhnyova 45)
-  response.md: уже существует, пропущен
-  hook не сработает — при необходимости: «сохранись» и push
+Rules for each bullet:
+
+- Link text = one short line: location/object — essence of the agency reply (same style as measure bullets in `statistics.md`).
+- Href = repo-relative path to that case’s `response/response.md`.
+- Write the summary from the response already read (after `pdf-to-text`); do not invent.
+- No long quotes; no score in the normal case.
+- Low-confidence match: after the bullet, a short note + 2–3 alternatives.
+- If `response.md` was skipped (already existed): still link it with a summary + `— пропущен` (or without summary if there is no text).
+- Unmatched PDF left in `inbox/`: explain separately; do not invent a case path.
+
+3. If `statistics.md` was updated in this run:
+
+```markdown
+[Статистика](statistics.md) обновлена:
+ответов получено 24→25
+мер принято 5→6
 ```
 
-At the end of the report, one line about `statistics.md`, for example:
+- Link on the word «Статистика».
+- Include «мер принято A→B» only if the measures counter changed; otherwise only «ответов получено …».
+- Do **not** repeat measure bullets in the report (they live in `statistics.md`).
+- If statistics were not updated — omit this block.
 
-```text
-statistics.md: Ответов получено 24→25; мер нет
+4. Footer — if at least one `response.md` was **created** in this run, end with exactly:
+
+```markdown
+Чтобы сохраниться, откройте ответ ↑ и нажмите сверху кнопку `Apply` — агент сделает всё остальное.
 ```
 
-```text
-statistics.md: Ответов получено 24→25; Мер принято 5→6; + «Вересковая улица — доп. пешеходный переход в проекте»
-```
+- If Agent auto-applies edits (no Apply UI): the hook still runs on write; keep the same footer wording.
+- If **no** `response.md` was created (all skipped / PDF-only): the Apply hook will not fire — suggest «сохранись» (and push) for those PDF + `statistics.md` changes.
+
+Pure `/inbox` (no mail) does **not** print a Gmail / Mos-ru intro — only the blocks above.
 
 ### 10. Commit and push (on Apply of response.md)
 
@@ -182,23 +204,17 @@ Do **not** ask for confirmation (no AskQuestion / no «ок»). Do **not** run `
 Saving is handled by the project hook [`.cursor/hooks/inbox-commit-push.sh`](../../../.cursor/hooks/inbox-commit-push.sh) on `afterFileEdit` when `<case>/response/response.md` is written/Applied:
 
 1. Stages that `<case>/response/` (PDF + `response.md`; ignores `_pdf_pages/`).
-2. Commits: `Add agency response for <case-name>`
-3. Pushes the current branch.
+2. If root `statistics.md` has unstaged changes — stages it too.
+3. Commits: `Add agency response for <case-name>`
+4. Pushes the current branch.
 
-The hook does **not** include `statistics.md`. To save it, use «сохранись» (or commit manually) after Apply.
-
-In the report footer:
-
-- If at least one `response.md` was **created** in this run: remind the user — «Чтобы сохранить и запушить — Apply у `response.md`.»
-- If Agent auto-applies edits (no Apply UI): the hook runs on write; no extra action needed — still mention that commit/push goes through the hook.
-- If `response.md` was **not** created (already existed / skipped): say the hook will not fire for that case; suggest «сохранись» (and push) manually if they want those PDF-only changes saved.
-- If `statistics.md` was updated: remind that it is not in the hook commit — «сохранись», if they want it saved.
+On several Applies in one run: the first commit usually takes `statistics.md`; later commits only that case’s `response/` if stats are already clean.
 
 Limits:
 
-- One Apply / one write of `response.md` → one commit for that case’s `response/` folder.
+- One Apply / one write of `response.md` → one commit (that case’s `response/`, plus dirty `statistics.md` when present).
 - Several cases in one `/inbox` run → several Applies → several commits.
-- Unrelated dirty files outside that `response/` are not included.
+- Unrelated dirty files outside that `response/` and `statistics.md` are not included.
 
 ## Safety Rules
 
@@ -207,7 +223,7 @@ Limits:
 - Do not silently overwrite existing `response.md` or duplicate PDFs in `response/`.
 - Do not invent measures or change statistics counters except from successfully processed responses in this run.
 - Do not change **Обращений подано** from `/inbox`.
-- Do not commit or push from the agent during `/inbox`; leave that to the Apply/`afterFileEdit` hook (and «сохранись» for `statistics.md`).
+- Do not commit or push from the agent during `/inbox`; leave that to the Apply/`afterFileEdit` hook (which includes dirty `statistics.md`).
 
 ## Expected User Phrases
 

@@ -1,5 +1,5 @@
-#!/usr/bin/env bash
-# After Apply/write of <case>/response/response.md: commit that response/ dir and push.
+# After Apply/write of <case>/response/response.md: commit that response/ dir
+# (and dirty root statistics.md, if any) and push.
 set -euo pipefail
 
 input="$(cat)"
@@ -31,10 +31,13 @@ repo_root="$(git -C "$response_dir" rev-parse --show-toplevel 2>/dev/null || tru
 
 cd "$repo_root"
 
-# Stage this response/ folder only; drop preview pages if staged.
+# Stage this response/ folder; drop preview pages if staged.
 git add -- "$response_dir"
 git reset -q -- "$response_dir/_pdf_pages" 2>/dev/null || true
 rm -rf "$response_dir/_pdf_pages" 2>/dev/null || true
+
+# Include updated statistics.md from the same /inbox|/mail-inbox run when dirty.
+[[ -f statistics.md ]] && git add -- statistics.md
 
 if git diff --cached --quiet; then
   exit 0

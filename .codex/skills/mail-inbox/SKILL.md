@@ -158,16 +158,27 @@ If no PDF was downloaded — do not run `/inbox`.
 
 ### 5. Report
 
-Per email:
+User-facing report — Markdown, **not** wrapped in a fenced `text` block. No per-email `Gmail <id>` dump as the main tone (record MCP/label errors only if something failed).
 
-```text
-Gmail <id> Fwd: Ответ № … на обращение гражданина
-  PDF → inbox/<mos-ru-filename>.pdf
-  skip: Направлен.pdf (дубль)
-  Gmail: read + Mos Responses. Processed
+**Intro** (counts by fact; typography per `typograf`):
+
+```markdown
+Пришло N писем от Мос-ру с ответами на ваши обращения.
+
+Из каждого письма скачан PDF-файл и добавлена текстовая расшифровка. Письма помечены прочитанными и перемещены из «Входящих» в папку `Mos Responses. Processed`.
 ```
 
-Then print the usual `/inbox` report (or explain skips / MCP / label errors).
+- `N` = accepted SEDO emails (original or forward).
+- If a PDF was not downloaded from every email (duplicate, ZIP-only) — adjust the second sentence; do not claim «из каждого» when false.
+- If `N` = 0 — «Новых ответов в почте нет.» and do **not** run `/inbox`.
+
+Then print the usual `/inbox` report blocks from [`inbox/SKILL.md`](../inbox/SKILL.md) §9:
+
+- `Сохранённые ответы:` with bullets `[краткое резюме](<case>/response/response.md)`
+- `[Статистика](statistics.md) обновлена:` when stats changed
+- Footer about Apply ↑ when at least one `response.md` was created
+
+Do not add a separate technical «Inbox:» heading.
 
 ## Safety Rules
 
