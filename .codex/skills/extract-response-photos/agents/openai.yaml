@@ -1,0 +1,4 @@
+interface:
+  display_name: "Extract Response Photos"
+  short_description: "Extract and crop photo attachments from a response PDF"
+  default_prompt: "Use $extract-response-photos to extract photo attachments from the response PDF into response/photos/."

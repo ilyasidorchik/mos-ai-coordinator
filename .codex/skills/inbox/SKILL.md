@@ -17,10 +17,11 @@ Process official response PDFs dropped into [`inbox/`](../../../inbox/):
 1. Match each PDF to the right case.
 2. Move it to `<case>/response/`.
 3. Run the [`pdf-to-text`](../pdf-to-text/SKILL.md) workflow for that file.
-4. Update [`statistics.md`](../../../statistics.md).
-5. Report; after the user Applies `response.md`, the project hook commits and pushes (`response/` and dirty `statistics.md`).
+4. If the response mentions attached photos — run [`extract-response-photos`](../extract-response-photos/SKILL.md).
+5. Update [`statistics.md`](../../../statistics.md).
+6. Report; after the user Applies `response.md`, the project hook commits and pushes (`response/` and dirty `statistics.md`).
 
-Do not duplicate transcription logic here — always delegate step 3 to `pdf-to-text`.
+Do not duplicate transcription or photo-crop logic here — always delegate step 3 to `pdf-to-text` and step 4 to `extract-response-photos`.
 
 ## Workflow
 
@@ -134,9 +135,34 @@ After a successful move:
    - do not silently overwrite existing `response.md`
    - delete `response/_pdf_pages/` after transcription
 
-### 8. Update statistics.md
+### 8. Extract attached photos
 
-At the end of the run — after all PDFs were processed (move + `pdf-to-text`) — update [`statistics.md`](../../../statistics.md). Skip this step if no PDF was successfully moved.
+After `pdf-to-text` (or when `response.md` already existed and was skipped), check whether the answer attaches photos.
+
+**Trigger** — any of these in `response.md` (preferred) or the PDF text from step 3:
+
+- `фотоматериал(ы) прилага(е|ю)тся`
+- `фото прилага`
+- fallback: PDF has ≥1 large image (width≥400) on a page after the first **and** the text contains `Приложение:` or `фото`
+
+If no trigger — skip this step.
+
+If triggered:
+
+1. Read [`.codex/skills/extract-response-photos/SKILL.md`](../extract-response-photos/SKILL.md).
+2. Run:
+
+```bash
+python3 .codex/skills/extract-response-photos/scripts/extract-response-photos.py \
+  "<case>/response/<just-moved>.pdf"
+```
+
+3. Photos land in `<case>/response/photos/` as `{case-folder}-result.jpg` (or `result1`, `result2`, …).
+4. If dependencies are missing or no large images are found — note it in the report; do **not** abort the rest of `/inbox`.
+
+### 9. Update statistics.md
+
+At the end of the run — after all PDFs were processed (move + `pdf-to-text` + optional photo extract) — update [`statistics.md`](../../../statistics.md). Skip this step if no PDF was successfully moved.
 
 1. Open `statistics.md`.
 2. **Ответов получено:** add `+1` for each PDF successfully moved to a case in this run. Do **not** count PDFs left in `inbox/` or skipped due to a name conflict in `response/`.
@@ -146,9 +172,9 @@ At the end of the run — after all PDFs were processed (move + `pdf-to-text`) �
    - append a bullet under `## Принятые меры` in the existing style: short, location/object — essence of the measure.
 5. If no measures — leave the measures counter and list unchanged.
 6. Do **not** change **Обращений подано** (out of scope for `/inbox`).
-7. Do **not** commit or push `statistics.md` from the agent during `/inbox` — the Apply hook stages it together with `response/` when dirty (see §10).
+7. Do **not** commit or push `statistics.md` from the agent during `/inbox` — the Apply hook stages it together with `response/` when dirty (see §11).
 
-### 9. Report
+### 10. Report
 
 Do **not** wrap the user-facing report in a fenced `text` / code block — Markdown links must stay clickable.
 
@@ -171,6 +197,14 @@ Rules for each bullet:
 - No long quotes; no score in the normal case.
 - Low-confidence match: after the bullet, a short note + 2–3 alternatives.
 - If `response.md` was skipped (already existed): still link it with a summary + `— пропущен` (or without summary if there is no text).
+- If photos were extracted in step 8: append to the same bullet `, [фото](<repo-relative path to the saved JPEG>)`. Example:
+
+```markdown
+- [16-я Парковая, 18 — Мосводосток заменил решётку](VAO/bike-friendly-drain-grates/16-th-parkovaya-18/response/response.md), [фото](VAO/bike-friendly-drain-grates/16-th-parkovaya-18/response/photos/16-th-parkovaya-18-result.jpg)
+```
+
+- Href of `[фото]` — the concrete file from step 8 (e.g. `{case}-result.jpg`), not the folder. Several photos: `, [фото](…/result1.jpg), [фото 2](…/result2.jpg)`.
+- If photo extraction was triggered but found nothing / failed deps: one short note, do not invent files or a `[фото]` link.
 - Unmatched PDF left in `inbox/`: explain separately; do not invent a case path.
 
 3. If `statistics.md` was updated in this run:
@@ -197,7 +231,7 @@ Rules for each bullet:
 
 Pure `/inbox` (no mail) does **not** print a Gmail / Mos-ru intro — only the blocks above.
 
-### 10. Commit and push (on Apply of response.md)
+### 11. Commit and push (on Apply of response.md)
 
 Do **not** ask for confirmation (no AskQuestion / no «ок»). Do **not** run `git commit` or `git push` from the agent during `/inbox`.
 
@@ -223,6 +257,7 @@ Limits:
 - Do not silently overwrite existing `response.md` or duplicate PDFs in `response/`.
 - Do not invent measures or change statistics counters except from successfully processed responses in this run.
 - Do not change **Обращений подано** from `/inbox`.
+- Do not invent photo files; only save what `extract-response-photos` actually writes.
 - Do not commit or push from the agent during `/inbox`; leave that to the Apply/`afterFileEdit` hook (which includes dirty `statistics.md`).
 
 ## Expected User Phrases

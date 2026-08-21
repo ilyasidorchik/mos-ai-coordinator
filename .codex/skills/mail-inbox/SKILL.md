@@ -13,14 +13,15 @@ disable-model-invocation: true
 ## Overview
 
 Pull official response emails from Gmail into [`inbox/`](../../../inbox/), then
-delegate routing and transcription to [`inbox`](../inbox/SKILL.md):
+delegate routing, transcription, and photo extraction to [`inbox`](../inbox/SKILL.md):
 
 1. Find SEDO response emails (originals and forwards).
 2. Download each PDF into `inbox/`.
 3. Mark the message read and move it to Gmail label `Mos Responses. Processed`.
-4. Run the [`inbox`](../inbox/SKILL.md) skill on whatever was downloaded.
+4. Run the [`inbox`](../inbox/SKILL.md) skill on whatever was downloaded
+   (match → move → pdf-to-text → extract attached photos when mentioned → report).
 
-Do not duplicate inbox matching or `pdf-to-text` — always delegate step 4.
+Do not duplicate inbox matching, `pdf-to-text`, or `extract-response-photos` — always delegate step 4.
 
 ## Prerequisites: Gmail MCP
 
@@ -150,7 +151,7 @@ Prefer `~/gmail-mcp/node_modules/googleapis` when that install exists from MCP s
 If at least one new PDF landed in `inbox/`:
 
 1. Read [`inbox/SKILL.md`](../inbox/SKILL.md).
-2. Execute its full workflow (match → move → pdf-to-text → report).
+2. Execute its full workflow (match → move → pdf-to-text → extract photos if attached → report).
 
 Do **not** commit or push from the agent; that stays with the inbox Apply / `afterFileEdit` hook.
 
@@ -170,9 +171,10 @@ User-facing report — Markdown, **not** wrapped in a fenced `text` block. No pe
 
 - `N` = accepted SEDO emails (original or forward).
 - If a PDF was not downloaded from every email (duplicate, ZIP-only) — adjust the second sentence; do not claim «из каждого» when false.
+- If in this run `/inbox` extracted photo attachments — extend the second sentence, e.g. «…текстовая расшифровка, а также фото из приложений.» Only when at least one photo file was actually saved.
 - If `N` = 0 — «Новых ответов в почте нет.» and do **not** run `/inbox`.
 
-Then print the usual `/inbox` report blocks from [`inbox/SKILL.md`](../inbox/SKILL.md) §9:
+Then print the usual `/inbox` report blocks from [`inbox/SKILL.md`](../inbox/SKILL.md) §10:
 
 - `Сохранённые ответы:` with bullets `[краткое резюме](<case>/response/response.md)`
 - `[Статистика](statistics.md) обновлена:` when stats changed
