@@ -251,7 +251,13 @@ Saving is handled by the project hook [`.cursor/hooks/inbox-commit-push.sh`](../
 2. Stages root `statistics.md` when present.
 3. **Apply on `response.md`:** stages that case’s `response/` plus dirty `statistics.md`.
 4. **Apply on `statistics.md`:** stages `statistics.md` plus any dirty files under `*/response/` (so response and stats commit together regardless of Apply order).
-5. Commits: `Add agency response for <case-name>` (or `Add agency response and statistics` when several cases are staged).
+5. Commits with:
+   ```text
+   Add response to #<id> about <parent>/<case>
+   ```
+   - `<id>` from sibling `request/request.md` (`Номера обращений:` — prefer Дептранс, else first numeric id); if no id — `Add response about <parent>/<case>`.
+   - `<case>` = folder that contains `response/` (e.g. `16-th-parkovaya-18` or `attempt-2`); `<parent>` = one level above it (e.g. `bike-friendly-drain-grates` or `zapovednaya`).
+   - Several cases staged together: `Add agency response and statistics`.
 6. Pushes the current branch.
 
 On several Applies in one run: the first commit usually takes `statistics.md`; later commits only that case’s `response/` if stats are already clean.

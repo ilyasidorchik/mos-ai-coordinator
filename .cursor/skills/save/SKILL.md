@@ -32,9 +32,23 @@ English, short — follow **Commit message rules** below.
 - If the same commit also has side changes (e.g. a district folder rename),
   still lead the subject with the request template; do not inflate the subject
   with secondary items.
-- Other primary change types (agency response, photos-only, skills, renames as
-  the main change, draft without a number): free-form English message matching
-  recent `git log` style.
+- Agency response (`response/response.md`, PDF, photos under `response/`, and
+  optionally `statistics.md` for one case):
+
+  ```text
+  Add response to #<id> about <parent>/<case>
+  ```
+
+  - `<id>` — same rules as for requests (from sibling `request/request.md`).
+  - `<case>` — folder that contains `response/` (e.g. `16-th-parkovaya-18` or
+    `attempt-2`); `<parent>` — one level above it (e.g.
+    `bike-friendly-drain-grates` or `zapovednaya`).
+  - No id: `Add response about <parent>/<case>`.
+  - Several unrelated cases in one commit: free-form (e.g. `Add agency response
+    and statistics`).
+- Other primary change types (photos-only outside a response save, skills,
+  renames as the main change, draft without a number): free-form English
+  message matching recent `git log` style.
 
 ## Workflow
 

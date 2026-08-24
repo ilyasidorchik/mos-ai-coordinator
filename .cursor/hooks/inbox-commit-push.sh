@@ -79,12 +79,66 @@ case_dirs="$(
 )"
 case_count="$(printf '%s\n' "$case_dirs" | sed '/^$/d' | wc -l | tr -d ' ')"
 
+# Build: Add response to #<id> about <parent>/<case>
+# case_dir = parent of response/; id from sibling request/request.md
+build_response_msg() {
+  local resp_dir="$1"
+  local case_dir case_name parent_name about request_md id
+  case_dir="$(dirname "$resp_dir")"
+  case_name="$(basename "$case_dir")"
+  parent_name="$(basename "$(dirname "$case_dir")")"
+  about="${parent_name}/${case_name}"
+  request_md="${case_dir}/request/request.md"
+  id=""
+  if [[ -f "$request_md" ]]; then
+    id="$(
+      python3 -c '
+import re, sys
+from pathlib import Path
+
+def norm(s: str) -> str:
+    return s.replace("\u00a0", " ").strip()
+
+text = Path(sys.argv[1]).read_text(encoding="utf-8")
+lines = text.splitlines()
+start = None
+for i, line in enumerate(lines):
+    if re.match(r"(?i)^Номера?\s+обращени[яй]\s*:\s*$", norm(line)):
+        start = i + 1
+        break
+if start is None:
+    sys.exit(0)
+deptrans = None
+first = None
+for line in lines[start:]:
+    s = norm(line)
+    if not s:
+        break
+    if re.match(r"(?i)^(Заголовок|Текст)\s*:", s):
+        break
+    nums = re.findall(r"\d{5,}", s)
+    if not nums:
+        continue
+    if first is None:
+        first = nums[0]
+    if re.search(r"дептранс", s, re.I):
+        deptrans = nums[0]
+        break
+print(deptrans or first or "", end="")
+' "$request_md"
+    )"
+  fi
+  if [[ -n "$id" ]]; then
+    printf 'Add response to #%s about %s' "$id" "$about"
+  else
+    printf 'Add response about %s' "$about"
+  fi
+}
+
 if [[ "$trigger" == "response" ]]; then
-  case_name="$(basename "$(dirname "$response_dir")")"
-  msg="Add agency response for ${case_name}"
+  msg="$(build_response_msg "$response_dir")"
 elif [[ "$case_count" -eq 1 ]]; then
-  case_name="$(basename "$(dirname "$case_dirs")")"
-  msg="Add agency response for ${case_name}"
+  msg="$(build_response_msg "$case_dirs")"
 else
   msg="Add agency response and statistics"
 fi
