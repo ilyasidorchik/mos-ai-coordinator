@@ -182,10 +182,12 @@ Do **not** use the old technical lines (`inbox/foo.pdf → … (score …)`, `re
 
 Structure:
 
-1. Heading: `Сохранённые ответы:`
+1. Plain line (not a markdown heading): `Сохранённые ответы:` followed by bullets.
 2. One bullet per successfully processed PDF (moved to a case):
 
 ```markdown
+Сохранённые ответы:
+
 - [16-я Парковая, 35 — Мосводосток заменил решётку](VAO/bike-friendly-drain-grates/16-th-parkovaya-35/response/response.md)
 ```
 
@@ -220,7 +222,15 @@ Rules for each bullet:
 - Do **not** repeat measure bullets in the report (they live in `statistics.md`).
 - If statistics were not updated — omit this block.
 
-4. Footer — if at least one `response.md` was **created** in this run, end with exactly:
+4. Footer — if at least one `response.md` was **created** in this run:
+
+If `statistics.md` was updated in this run:
+
+```markdown
+Чтобы сохраниться, нажмите `Apply` на ответ ↑ и на [статистику](statistics.md) — агент сделает всё остальное.
+```
+
+Otherwise:
 
 ```markdown
 Чтобы сохраниться, откройте ответ ↑ и нажмите сверху кнопку `Apply` — агент сделает всё остальное.
@@ -231,24 +241,26 @@ Rules for each bullet:
 
 Pure `/inbox` (no mail) does **not** print a Gmail / Mos-ru intro — only the blocks above.
 
-### 11. Commit and push (on Apply of response.md)
+### 11. Commit and push (on Apply of response.md or statistics.md)
 
 Do **not** ask for confirmation (no AskQuestion / no «ок»). Do **not** run `git commit` or `git push` from the agent during `/inbox`.
 
-Saving is handled by the project hook [`.cursor/hooks/inbox-commit-push.sh`](../../../.cursor/hooks/inbox-commit-push.sh) on `afterFileEdit` when `<case>/response/response.md` is written/Applied:
+Saving is handled by the project hook [`.cursor/hooks/inbox-commit-push.sh`](../../../.cursor/hooks/inbox-commit-push.sh) on `afterFileEdit` when `<case>/response/response.md` or root `statistics.md` is written/Applied:
 
-1. Stages that `<case>/response/` (PDF + `response.md`; ignores `_pdf_pages/`).
-2. If root `statistics.md` has unstaged changes — stages it too.
-3. Commits: `Add agency response for <case-name>`
-4. Pushes the current branch.
+1. Stages the relevant `<case>/response/` (PDF + `response.md`; ignores `_pdf_pages/`).
+2. Stages root `statistics.md` when present.
+3. **Apply on `response.md`:** stages that case’s `response/` plus dirty `statistics.md`.
+4. **Apply on `statistics.md`:** stages `statistics.md` plus any dirty files under `*/response/` (so response and stats commit together regardless of Apply order).
+5. Commits: `Add agency response for <case-name>` (or `Add agency response and statistics` when several cases are staged).
+6. Pushes the current branch.
 
 On several Applies in one run: the first commit usually takes `statistics.md`; later commits only that case’s `response/` if stats are already clean.
 
 Limits:
 
-- One Apply / one write of `response.md` → one commit (that case’s `response/`, plus dirty `statistics.md` when present).
+- One Apply of `response.md` or `statistics.md` → one commit (paired `response/` + dirty `statistics.md` when present).
 - Several cases in one `/inbox` run → several Applies → several commits.
-- Unrelated dirty files outside that `response/` and `statistics.md` are not included.
+- Unrelated dirty files outside `*/response/` and `statistics.md` are not included.
 
 ## Safety Rules
 

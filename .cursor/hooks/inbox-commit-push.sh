@@ -1,5 +1,5 @@
-# After Apply/write of <case>/response/response.md: commit that response/ dir
-# (and dirty root statistics.md, if any) and push.
+# After Apply/write of <case>/response/response.md or root statistics.md:
+# commit response/ dir(s) and statistics.md together, then push.
 set -euo pipefail
 
 input="$(cat)"
@@ -18,41 +18,84 @@ print(path)
 
 [[ -z "$file_path" ]] && exit 0
 
+trigger=""
+response_dir=""
+
 case "$file_path" in
-  */response/response.md) ;;
-  *) exit 0 ;;
+  */response/response.md)
+    trigger="response"
+    response_dir="$(dirname "$file_path")"
+    ;;
+  *statistics.md)
+    trigger="statistics"
+    ;;
+  *)
+    exit 0
+    ;;
 esac
 
-response_dir="$(dirname "$file_path")"
-[[ -d "$response_dir" ]] || exit 0
+if [[ "$trigger" == "response" ]]; then
+  [[ -d "$response_dir" ]] || exit 0
+  repo_root="$(git -C "$response_dir" rev-parse --show-toplevel 2>/dev/null || true)"
+else
+  repo_root="$(git -C "$(dirname "$file_path")" rev-parse --show-toplevel 2>/dev/null || true)"
+fi
 
-repo_root="$(git -C "$response_dir" rev-parse --show-toplevel 2>/dev/null || true)"
 [[ -n "$repo_root" ]] || exit 0
 
 cd "$repo_root"
 
-# Stage this response/ folder; drop preview pages if staged.
-git add -- "$response_dir"
-git reset -q -- "$response_dir/_pdf_pages" 2>/dev/null || true
-rm -rf "$response_dir/_pdf_pages" 2>/dev/null || true
+stage_response_dirs() {
+  local dir
+  while IFS= read -r dir; do
+    [[ -n "$dir" && -d "$dir" ]] || continue
+    git add -- "$dir"
+    git reset -q -- "$dir/_pdf_pages" 2>/dev/null || true
+    rm -rf "$dir/_pdf_pages" 2>/dev/null || true
+  done < <(
+    {
+      git diff --name-only -- ':(glob)*/response/*' ':(glob)*/response/*/**' 2>/dev/null || true
+      git ls-files --others --exclude-standard -- ':(glob)*/response/*' ':(glob)*/response/*/**' 2>/dev/null || true
+    } | sed -n 's|^\(.*/response\)/.*|\1|p' | sort -u
+  )
+}
 
-# Include updated statistics.md from the same /inbox|/mail-inbox run when dirty.
+if [[ "$trigger" == "response" ]]; then
+  git add -- "$response_dir"
+  git reset -q -- "$response_dir/_pdf_pages" 2>/dev/null || true
+  rm -rf "$response_dir/_pdf_pages" 2>/dev/null || true
+else
+  stage_response_dirs
+fi
+
 [[ -f statistics.md ]] && git add -- statistics.md
 
 if git diff --cached --quiet; then
   exit 0
 fi
 
-case_name="$(basename "$(dirname "$response_dir")")"
-msg="Add agency response for ${case_name}"
+case_dirs="$(
+  git diff --cached --name-only | sed -n 's|^\(.*/response\)/.*|\1|p' | sort -u
+)"
+case_count="$(printf '%s\n' "$case_dirs" | sed '/^$/d' | wc -l | tr -d ' ')"
+
+if [[ "$trigger" == "response" ]]; then
+  case_name="$(basename "$(dirname "$response_dir")")"
+  msg="Add agency response for ${case_name}"
+elif [[ "$case_count" -eq 1 ]]; then
+  case_name="$(basename "$(dirname "$case_dirs")")"
+  msg="Add agency response for ${case_name}"
+else
+  msg="Add agency response and statistics"
+fi
 
 if ! git commit -m "$msg"; then
-  echo "inbox-commit-push: commit failed for $response_dir" >&2
+  echo "inbox-commit-push: commit failed for $file_path" >&2
   exit 0
 fi
 
 if ! git push; then
-  echo "inbox-commit-push: push failed after commit for $response_dir" >&2
+  echo "inbox-commit-push: push failed after commit for $file_path" >&2
   exit 0
 fi
 

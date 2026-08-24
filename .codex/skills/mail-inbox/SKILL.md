@@ -72,7 +72,7 @@ If there are no matching emails — report and **do not** run `/inbox`.
 For every accepted message:
 
 1. `gmail_list_attachments` — collect PDF attachments (`contentType` starts with `application/pdf`).
-2. Skip any PDF whose basename is exactly `Направлен.pdf` (duplicate of the letter inside the mos.ru export). Note the skip in the report.
+2. Skip any PDF whose basename is exactly `Направлен.pdf` (duplicate of the letter inside the mos.ru export). Skip silently — do not mention in the user report.
 3. Download each remaining PDF with `gmail_get_attachment` and `customPath` = absolute path to repo [`inbox/`](../../../inbox/). Prefer the mos.ru export (filename with `идентификатор：`); that is usually index `0`.
 4. Strip the downloader timestamp prefix if present (`2026-07-12T13-39-11-825Z_…` → original mos.ru filename) so `/inbox` can parse `идентификатор： …`.
 5. `gmail_mark_email` with `read: true`.
@@ -164,21 +164,31 @@ User-facing report — Markdown, **not** wrapped in a fenced `text` block. No pe
 **Intro** (counts by fact; typography per `typograf`):
 
 ```markdown
+Пришло 1 письмо от Мос-ру с ответом на ваше обращение.
+
+Из каждого письма скачан PDF-файл и добавлена текстовая расшифровка. Письма помечены прочитанными и перемещены из «Входящих» в папку `Mos Responses. Processed`.
+```
+
+```markdown
 Пришло N писем от Мос-ру с ответами на ваши обращения.
 
 Из каждого письма скачан PDF-файл и добавлена текстовая расшифровка. Письма помечены прочитанными и перемещены из «Входящих» в папку `Mos Responses. Processed`.
 ```
 
 - `N` = accepted SEDO emails (original or forward).
-- If a PDF was not downloaded from every email (duplicate, ZIP-only) — adjust the second sentence; do not claim «из каждого» when false.
+- **N = 1** — use the first intro (singular: «1 письмо», «с ответом на ваше обращение»).
+- **N ≥ 2** — use the second intro; substitute the actual count for `N`.
+- Write **«Мос-ру» through a hyphen**, never «Мос.ру».
+- If a PDF was not downloaded from every email due to a **failure** (not routine skip) — adjust the second sentence; do not claim «из каждого» when false.
+- **Do not mention** routine skipped attachments in the report: ZIP «Документ с ЭП», `Направлен.pdf`, `message/rfc822`, or other non-PDF parts.
 - If in this run `/inbox` extracted photo attachments — extend the second sentence, e.g. «…текстовая расшифровка, а также фото из приложений.» Only when at least one photo file was actually saved.
 - If `N` = 0 — «Новых ответов в почте нет.» and do **not** run `/inbox`.
 
 Then print the usual `/inbox` report blocks from [`inbox/SKILL.md`](../inbox/SKILL.md) §10:
 
-- `Сохранённые ответы:` with bullets `[краткое резюме](<case>/response/response.md)`
+- Plain line `Сохранённые ответы:` (not a markdown heading) with bullets `[краткое резюме](<case>/response/response.md)`
 - `[Статистика](statistics.md) обновлена:` when stats changed
-- Footer about Apply ↑ when at least one `response.md` was created
+- Footer about Apply (response ↑ and `statistics.md` when stats changed) — see inbox §10
 
 Do not add a separate technical «Inbox:» heading.
 
@@ -187,6 +197,7 @@ Do not add a separate technical «Inbox:» heading.
 - Only process SEDO response emails as defined in Scope.
 - Only download PDF attachments.
 - Do not download `Направлен.pdf` — it duplicates the letter already in the mos.ru export.
+- Do not mention routine skipped attachments (`Направлен.pdf`, «Документ с ЭП.zip`, non-PDF parts) in the user report.
 - Do not use the browser as a Gmail substitute when MCP is missing.
 - Do not run `/inbox` when this skill downloaded nothing.
 - Do not commit or push; leave that to the inbox hook after `response.md` Apply.
