@@ -11,7 +11,7 @@
   ],
   "autoRun": {
     "allow_instructions": [
-      "When the user invoked /telegram or asked to post a case response result to the Telegram channel, allow Upload-Post MCP tools create_media_upload, complete_media_upload, and upload_photos for profile mos-ai-coordinator / platform telegram.",
+      "When the user invoked /telegram or asked to post a case response result to the Telegram channel, allow Upload-Post MCP tools create_media_upload, complete_media_upload, and upload_photos for the Upload-Post profile from project .env (UPLOAD_POST_USER) / platform telegram.",
       "When publishing via /telegram, allow shell curl PUT of a local response JPEG to the Cloudflare R2 upload_url returned by create_media_upload (Content-Type image/jpeg, --data-binary)."
     ]
   }

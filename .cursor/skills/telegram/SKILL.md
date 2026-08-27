@@ -11,9 +11,10 @@ disable-model-invocation: true
 
 ## Overview
 
-By **explicit** command only: post to the Telegram channel (Upload-Post profile
-`mos-ai-coordinator`) a result photo from `<case>/response/photos/` with a short
-caption (outcome + district/address + coordinates).
+By **explicit** command only: post to the user's Telegram channel (Upload-Post
+profile and channel username from project [`.env`](../../../.env)) a result
+photo from `<case>/response/photos/` with a short caption (outcome +
+district/address + coordinates).
 
 Do **not** run from `/inbox` or other skills unless the user asks for `/telegram`.
 
@@ -31,6 +32,22 @@ Upload-Post publish tools and steers Auto-review for the staging `curl` PUT.
 - «Поделись ответом в канал»
 
 ## Workflow
+
+### 0. Load local config
+
+Read [`.env`](../../../.env) at the repo root (create from
+[`.env.example`](../../../.env.example) if missing). Required keys:
+
+| Key | Use |
+| --- | --- |
+| `UPLOAD_POST_USER` | Upload-Post profile (`user` in `upload_photos`) |
+| `TELEGRAM_CHANNEL_USERNAME` | Public channel username **without** `@` (post link) |
+
+If the file is missing or either value is empty — **stop**, tell the user to
+copy `.env.example` → `.env` and fill both. Do **not** invent defaults and do
+**not** fall back to any hardcoded profile or channel.
+
+Strip a leading `@` from `TELEGRAM_CHANNEL_USERNAME` if the user included one.
 
 ### 1. Resolve the case
 
@@ -133,7 +150,7 @@ The hosted MCP **cannot** read local disk paths. For each photo:
 
 | Field | Value |
 | --- | --- |
-| `user` | `mos-ai-coordinator` |
+| `user` | `UPLOAD_POST_USER` from `.env` |
 | `platforms` | `["telegram"]` |
 | `title` | full caption from step 4 |
 | `photosPathsOrUrls` | list of `media_url` values |
@@ -143,14 +160,25 @@ If MCP is missing / not authenticated — stop and say so; do not fake a post.
 
 ### 6. Report
 
-Briefly: posted caption (or paraphrase), photo count, `post_id` / success from
-the MCP result.
+After a successful publish, reply briefly with:
+
+1. What was posted (caption paraphrase / photo count).
+2. **Post link** — mandatory. Prefer non-null `results.telegram.url` (or
+   `post_url` from job status). If Upload-Post returns `url` / `post_url` as
+   null (usual for Telegram), build:
+
+   `https://t.me/<TELEGRAM_CHANNEL_USERNAME>/<post_id>`
+
+   where `<TELEGRAM_CHANNEL_USERNAME>` is from `.env` and `<post_id>` is
+   `results.telegram.post_id` (message id in the channel).
 
 ## Safety rules
 
 - Do not post without an explicit user command for this skill.
 - Do not invent coordinates, address, district label, or photos.
+- Do not invent or hardcode Upload-Post profile / channel username — only `.env`.
 - Do not add maps URLs or other links to the caption.
 - Do not post text without at least one result photo.
 - Do not commit or push.
 - Do not change `inbox/`, `statistics.md`, or case files as part of this skill.
+- Do not commit `.env`.
