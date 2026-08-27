@@ -1,0 +1,4 @@
+interface:
+  display_name: "Telegram"
+  short_description: "Post response result photo and caption to Telegram"
+  default_prompt: "Use $telegram to publish the case response result photo to the Telegram channel."
