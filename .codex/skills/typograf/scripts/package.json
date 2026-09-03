@@ -1,0 +1,8 @@
+{
+  "name": "mos-ai-coordinator-typograf",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "typograf": "^7.4.1"
+  }
+}

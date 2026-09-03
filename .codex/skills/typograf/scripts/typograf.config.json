@@ -1,0 +1,17 @@
+{
+  "locale": ["ru"],
+  "disableRule": [
+    "common/space/trimLeft",
+    "common/space/trimRight",
+    "common/space/delLeadingBlanks",
+    "common/space/delRepeatN",
+    "common/html/url",
+    "common/html/e-mail",
+    "ru/date/fromISO"
+  ],
+  "enableRule": [],
+  "htmlEntity": {
+    "type": "default",
+    "onlyInvisible": false
+  }
+}

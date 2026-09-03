@@ -11,25 +11,30 @@ description: >-
 
 ## Overview
 
-Apply Russian typography to the text the user points to. Edit the file in place unless the user asks for a copy or preview only.
+Apply Russian typography to the text the user points to via the project script
+(in place). Do not hand-edit NBSP, quotes, or dashes — run the script.
 
 Typical targets: `request/request.md`, draft paragraphs in case folders.
 
-## Rules
+## Rules (what the script does)
 
-Если пользователь просит оттипографировать текст, нужно в том числе:
-
-- использовать русские кавычки «…»;
-- использовать длинное тире;
-- ставить неразрывные пробелы перед короткими предлогами, союзами и числами там, где это уместно;
-- в адресах ставить неразрывные пробелы между «ул.» и названием улицы и между словами в названии улицы (например: `ул. Академика Анохина`, не `ул. Академика Анохина`). То же для других сокращений типа улицы: «пр.», «пер.», «ш.», «б-р», «наб.», «пл.» — между сокращением и названием и внутри многословного названия.
+- русские кавычки «…»;
+- длинное тире;
+- неразрывные пробелы после коротких предлогов, союзов и у чисел;
+- в адресах: NBSP после «ул.», «пр.», «пер.», «ш.», «б-р», «наб.», «пл.» и между словами многословного названия (`ул. Академика Анохина`).
 
 ## Workflow
 
-1. Resolve the target file or pasted text.
-2. Apply the rules above without changing meaning, structure, or factual content.
-3. Do not rewrite style beyond typography unless the user asks.
-4. Save the file and briefly note what was changed.
+1. Resolve the target file (prefer the path the user gave; else the case `request/request.md`).
+2. From the repo root, run:
+
+```bash
+.codex/skills/typograf/scripts/typograf.sh "path/to/request.md"
+```
+
+3. Report briefly: `updated` / `unchanged` from the script stderr, and any issues.
+
+If the user pasted text without a file — save it to the intended `request.md` first, then run the script (or ask where to write).
 
 ## Expected user phrases
 
@@ -40,6 +45,7 @@ Typical targets: `request/request.md`, draft paragraphs in case folders.
 
 ## Safety rules
 
-- Do not alter quotes from official responses; preserve their wording.
-- Do not change numbers, dates, addresses, or reference numbers.
-- Do not typograf files outside the repo unless the user explicitly asks.
+- Do not alter the meaning of official quotes beyond typography the script applies.
+- Do not change numbers, dates, addresses, or reference numbers by hand.
+- Do not typograf files outside the repo (the script refuses paths outside the git root).
+- Do not invent facts or rewrite style beyond typography.

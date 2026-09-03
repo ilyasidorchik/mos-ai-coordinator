@@ -103,9 +103,15 @@ Fix only what is clearly wrong or confusing. Do not rewrite the whole text unles
 
 ### 9. Run typograf
 
-Read [`.codex/skills/typograf/SKILL.md`](../typograf/SKILL.md) and apply it to the same `request.md`.
-
 Typography is the **last** editorial step — do not typograf before factual and semantic fixes are done.
+
+From the repo root, run the typograf script on the same `request.md` (see [`.codex/skills/typograf/SKILL.md`](../typograf/SKILL.md)):
+
+```bash
+.codex/skills/typograf/scripts/typograf.sh "path/to/request.md"
+```
+
+Do not hand-edit NBSP, quotes, or dashes — the script applies them.
 
 ### 10. Report to the user
 
