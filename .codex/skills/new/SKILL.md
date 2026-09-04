@@ -73,13 +73,13 @@ Never create sibling folders like `case-attempt-2`.
 ### 3. Write `request.md`
 
 Use this skeleton and fill `Заголовок:` and `Текст:` in the same pass (see
-«When drafting»). Put the agency short name under `Номера обращений:` from
+«When drafting»). Put the agency short name under `Номер обращения:` from
 Agency hint (default `Дептранс`; if the user names another — its short name).
 Do not invent appeal numbers. For several agencies — one short name per line,
 still without numbers:
 
 ```markdown
-Номера обращений:
+Номер обращения:
 Дептранс
 
 Заголовок:
@@ -101,10 +101,11 @@ Leave `photos/` empty. Do not add `.gitkeep` unless the repo already uses it for
    If the command fails, continue; the chat link is enough.
 5. Update statistics (step 5 below).
 6. End the user-facing reply with these two final lines (blank line between them):
-   `statistics.md: Это будет ваше 39-е обращение`
+   `[statistics.md](statistics.md): Это будет ваше 39-е обращение`
 
    `[Ваш черновик](UVAO/cycling/sovkhoznaya-cycle-stop/request/request.md)`
-   Use the new total after the `+1` bump for N. Put the draft link last,
+   Use the new total after the `+1` bump for N. After `N-е` put a
+   non-breaking space (U+00A0) before `обращение`. Put the draft link last,
    separated from the statistics line by one blank line.
 
 ### 5. Update statistics.md
@@ -128,7 +129,7 @@ Always fill `Заголовок:` and `Текст:` as part of `/new`.
   location, dates, and facts from the prompt — do not invent details absent there.
 - For a series: read prior `attempt-*/request/request.md` and `response/response.md`; argue from real replies, do not invent реквизиты.
 - Do **not** run `prepare-request` / `typograf` unless the user asks.
-- Put the agency short name under `Номера обращений:` immediately (default
+- Put the agency short name under `Номер обращения:` immediately (default
   `Дептранс`). Add the appeal number only after submission assigns one.
 
 ## Expected user phrases
