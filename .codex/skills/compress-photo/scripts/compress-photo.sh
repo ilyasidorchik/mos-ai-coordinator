@@ -202,6 +202,11 @@ done
 mv "$BEST_FILE" "$TARGET"
 BEST_FILE=""
 
+# After PNG→JPG, drop the original PNG so the folder has one attachment file.
+if (( PNG_TO_JPG )) && [[ -f "$PHOTO" && "$PHOTO" != "$TARGET" ]]; then
+  rm -f "$PHOTO"
+fi
+
 after_size="$(get_size "$TARGET")"
 ratio="$(awk -v a="$after_size" -v b="$before_size" 'BEGIN { printf "%.1f", (a / b) * 100 }')"
 

@@ -21,7 +21,7 @@ Typical paths: `request/photos/` inside a case folder.
 
 При работе с фото:
 - при сжатии сохранять понятные имена файлов;
-- при сжатии заменять исходные файлы, кроме случая, когда пользователь одобрил конвертацию PNG в JPG;
+- при сжатии заменять исходные файлы; для крупных PNG — писать `.jpg` и удалять исходный `.png`;
 - если пользователь просит подготовить фото для отправки, лучше уменьшать размер без потери читаемости деталей.
 
 Для сжатия используется в формате CLI [Squoosh](https://squoosh.app/) от разработчиков браузера Google Chrome.
@@ -35,7 +35,7 @@ Typical paths: `request/photos/` inside a case folder.
 - Use the path the user gave (`@`-mention or explicit path).
 - If the path is missing or not an image, report and stop.
 - Process **one file per run**. For several files, run the skill once per file or ask whether to batch.
-- If the file is `.png`, inspect its size first. If it is likely that PNG compression alone may not get below `5 MB`, ask the user with `AskQuestion` whether conversion to `.jpg` is acceptable for better compression. Explain that JPEG will usually shrink maps and screenshots much more aggressively, but will produce a new `.jpg` file instead of keeping the `.png`.
+- If the file is `.png`, inspect its size first. If it is **≥ ~1 MB** or otherwise unlikely that oxipng alone will get below `5 MB` (photos, large screenshots, maps), **do not ask** — convert with `--png-to-jpg` immediately. Prefer JPG for large PNGs by default; only keep PNG when the file is already small and oxipng is enough.
 
 2. Run compression.
 
@@ -45,7 +45,7 @@ From the repo root:
 .codex/skills/compress-photo/scripts/compress-photo.sh "path/to/photo.jpeg"
 ```
 
-If the user approved PNG-to-JPG conversion, call:
+For large PNG (auto-convert, no confirmation):
 
 ```bash
 .codex/skills/compress-photo/scripts/compress-photo.sh --png-to-jpg "path/to/photo.png"
@@ -68,7 +68,7 @@ The script must keep retrying with slightly stronger compression until the resul
 |--------|------------------|--------|
 | `.jpg`, `.jpeg` | `--mozjpeg` | `{"quality":75}` |
 | `.png` | `--oxipng` | `{"quality":75}` |
-| `.png` with approved conversion | `--mozjpeg` | `{"quality":75}` |
+| `.png` → `.jpg` (large PNG / unlikely under 5 MB) | `--mozjpeg` | `{"quality":75}` |
 
 `@squoosh/cli` does not expose a separate «Browser PNG» encoder; use `--oxipng` with the same quality value.
 
@@ -88,5 +88,5 @@ The script must keep retrying with slightly stronger compression until the resul
 
 - Do not create sidecar copies with `-compressed` suffixes.
 - For regular JPEG/PNG compression, replace the original file in place.
-- For approved PNG-to-JPG conversion, write the result as the same basename with a `.jpg` extension and report that path explicitly.
+- For PNG-to-JPG conversion, write the result as the same basename with a `.jpg` extension, remove the original `.png`, and report the `.jpg` path explicitly.
 - Do not compress files outside the repo unless the user explicitly asks.
