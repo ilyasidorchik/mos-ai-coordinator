@@ -13,7 +13,8 @@ disable-model-invocation: true
 ## Overview
 
 Create the case folder and draft `request.md` in the same pass.
-End the reply with a link to `request.md` and open it in the editor.
+End the reply with the statistics line and a link
+`[Ваш черновик](…/request/request.md)`; open the draft in the editor.
 
 1. Resolve district / topic / case name (and whether this is a repeat).
 2. Create the correct folder structure.
@@ -99,11 +100,12 @@ Leave `photos/` empty. Do not add `.gitkeep` unless the repo already uses it for
    `cursor -g "<repo-relative-or-absolute-path-to-request.md>"`
    If the command fails, continue; the chat link is enough.
 5. Update statistics (step 5 below).
-6. End the user-facing reply with a markdown link to the created
-   `request.md` (repo-relative path), e.g.
-   `[request.md](UVAO/cycling/sovkhoznaya-cycle-stop/request/request.md)`.
-   Include one line about `statistics.md`, for example:
-   `statistics.md: Обращений подано 38→39`.
+6. End the user-facing reply with these two final lines (blank line between them):
+   `statistics.md: Это будет ваше 39-е обращение`
+
+   `[Ваш черновик](UVAO/cycling/sovkhoznaya-cycle-stop/request/request.md)`
+   Use the new total after the `+1` bump for N. Put the draft link last,
+   separated from the statistics line by one blank line.
 
 ### 5. Update statistics.md
 
