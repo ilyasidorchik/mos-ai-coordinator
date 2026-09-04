@@ -51,6 +51,14 @@ Also skip a PDF whose filename is exactly `Направлен.pdf` (case-sensiti
 
 ## Workflow
 
+### 0. Opening status
+
+Before tool calls, tell the user in one short line (exact wording):
+
+```text
+Забираю ответы из Gmail по skill `/mail-inbox`: сначала проверю MCP и найду письма от Мос-ру
+```
+
 ### 1. Search (metadata only — cheap)
 
 Call `gmail_search_emails` with a query equivalent to:
@@ -182,7 +190,13 @@ User-facing report — Markdown, **not** wrapped in a fenced `text` block. No pe
 - If a PDF was not downloaded from every email due to a **failure** (not routine skip) — adjust the second sentence; do not claim «из каждого» when false.
 - **Do not mention** routine skipped attachments in the report: ZIP «Документ с ЭП», `Направлен.pdf`, `message/rfc822`, or other non-PDF parts.
 - If in this run `/inbox` extracted photo attachments — extend the second sentence, e.g. «…текстовая расшифровка, а также фото из приложений.» Only when at least one photo file was actually saved.
-- If `N` = 0 — «Новых ответов в почте нет.» and do **not** run `/inbox`.
+- If `N` = 0 — use this exact text (two paragraphs) and do **not** run `/inbox`:
+
+```markdown
+Новых ответов в почте нет. Пишите ещё!
+
+Чтобы я помог составить новое обращение, напишите мне `/new идея обращения`
+```
 
 Then print the usual `/inbox` report blocks from [`inbox/SKILL.md`](../inbox/SKILL.md) §10:
 
