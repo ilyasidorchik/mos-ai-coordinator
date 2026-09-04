@@ -101,7 +101,7 @@ Leave `photos/` empty. Do not add `.gitkeep` unless the repo already uses it for
    If the command fails, continue; the chat link is enough.
 5. Update statistics (step 5 below).
 6. End the user-facing reply with these two final lines (blank line between them):
-   `[statistics.md](statistics.md): Это будет ваше 39-е обращение`
+   `[statistics.md](statistics.md): Это будет 39-е обращение`
 
    `[Ваш черновик](UVAO/cycling/sovkhoznaya-cycle-stop/request/request.md)`
    Use the new total after the `+1` bump for N. After `N-е` put a
