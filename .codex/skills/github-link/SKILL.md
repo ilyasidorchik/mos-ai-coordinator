@@ -24,7 +24,7 @@ https://github.com/<owner>/<repo>/blob/<branch>/<path>
 Example:
 
 ```text
-https://github.com/ilyasidorchik/mos-ai-coordinator/blob/main/UVAO/public-transport/bus-438-nikolo-perervinsky/response/response.md
+https://github.com/ilyasidorchik/mos-ai-coordinator/blob/main/UVAO/public-transport/bus-438-to-metro-delay/2026-08-05/response/response.md
 ```
 
 ## Expected user phrases
