@@ -76,7 +76,7 @@ of `/inbox` silently. Install or skip photo extraction for that PDF only.
   smoke test).
 - Do not delete or overwrite existing photos in `response/photos/`.
 - Do not invent photos when the PDF has none.
-- Do not commit or push; leave that to the inbox Apply hook.
+- Do not commit or push; leave that to `/inbox` auto-save (`/save` or `/save-selected`).
 
 ## Expected User Phrases
 

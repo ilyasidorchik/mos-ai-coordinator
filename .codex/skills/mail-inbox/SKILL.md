@@ -19,7 +19,8 @@ delegate routing, transcription, and photo extraction to [`inbox`](../inbox/SKIL
 2. Download each PDF into `inbox/`.
 3. Mark the message read and move it to Gmail label `Mos Responses. Processed`.
 4. Run the [`inbox`](../inbox/SKILL.md) skill on whatever was downloaded
-   (match → move → pdf-to-text → extract attached photos when mentioned → report).
+   (match → move → pdf-to-text → extract attached photos when mentioned →
+   statistics → save → report).
 
 Do not duplicate inbox matching, `pdf-to-text`, or `extract-response-photos` — always delegate step 4.
 
@@ -159,9 +160,9 @@ Prefer `~/gmail-mcp/node_modules/googleapis` when that install exists from MCP s
 If at least one new PDF landed in `inbox/`:
 
 1. Read [`inbox/SKILL.md`](../inbox/SKILL.md).
-2. Execute its full workflow (match → move → pdf-to-text → extract photos if attached → report).
+2. Execute its full workflow (match → move → pdf-to-text → extract photos if attached → update statistics → save via `/save` or `/save-selected` → report).
 
-Do **not** commit or push from the agent; that stays with the inbox Apply / `afterFileEdit` hook.
+Saving (commit + push) is done by the delegated [`inbox`](../inbox/SKILL.md) skill — do not wait for Apply and do not run a separate commit from `mail-inbox`.
 
 If no PDF was downloaded — do not run `/inbox`.
 
@@ -202,7 +203,8 @@ Then print the usual `/inbox` report blocks from [`inbox/SKILL.md`](../inbox/SKI
 
 - Plain line `Сохранённые ответы:` (not a markdown heading) with bullets `[краткое резюме](<case>/response/response.md)`
 - `[Статистика](statistics.md) обновлена:` when stats changed
-- Footer about Apply (response ↑ and `statistics.md` when stats changed) — see inbox §10
+
+(Saving already ran inside `/inbox` §11 — no Apply footer.)
 
 Do not add a separate technical «Inbox:» heading.
 
@@ -214,7 +216,7 @@ Do not add a separate technical «Inbox:» heading.
 - Do not mention routine skipped attachments (`Направлен.pdf`, «Документ с ЭП.zip`, non-PDF parts) in the user report.
 - Do not use the browser as a Gmail substitute when MCP is missing.
 - Do not run `/inbox` when this skill downloaded nothing.
-- Do not commit or push; leave that to the inbox hook after `response.md` Apply.
+- Do not commit or push from `mail-inbox` itself; delegated `/inbox` saves via `/save` or `/save-selected`.
 - One failed email must not abort the batch.
 
 ## Expected User Phrases

@@ -1,12 +1,4 @@
 {
   "version": 1,
-  "hooks": {
-    "afterFileEdit": [
-      {
-        "command": ".cursor/hooks/inbox-commit-push.sh",
-        "matcher": "Write",
-        "timeout": 120
-      }
-    ]
-  }
+  "hooks": {}
 }

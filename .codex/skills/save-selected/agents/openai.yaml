@@ -1,0 +1,4 @@
+interface:
+  display_name: "Save selected"
+  short_description: "Commit listed paths only and push to remote"
+  default_prompt: "Use $save-selected to git add only the given paths, commit, and push."

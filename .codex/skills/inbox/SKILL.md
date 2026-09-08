@@ -19,7 +19,8 @@ Process official response PDFs dropped into [`inbox/`](../../../inbox/):
 3. Run the [`pdf-to-text`](../pdf-to-text/SKILL.md) workflow for that file.
 4. If the response mentions attached photos — run [`extract-response-photos`](../extract-response-photos/SKILL.md).
 5. Update [`statistics.md`](../../../statistics.md).
-6. Report; after the user Applies `response.md`, the project hook commits and pushes (`response/` and dirty `statistics.md`).
+6. Save without waiting for the user: one case → `git add .` + [`/save`](../save/SKILL.md); several cases → [`/save-selected`](../save-selected/SKILL.md) per case with an explicit path list.
+7. Report.
 
 Do not duplicate transcription or photo-crop logic here — always delegate step 3 to `pdf-to-text` and step 4 to `extract-response-photos`.
 
@@ -172,9 +173,11 @@ At the end of the run — after all PDFs were processed (move + `pdf-to-text` + 
    - append a bullet under `## Принятые меры` in the existing style: short, location/object — essence of the measure.
 5. If no measures — leave the measures counter and list unchanged.
 6. Do **not** change **Обращений подано** (out of scope for `/inbox`).
-7. Do **not** commit or push `statistics.md` from the agent during `/inbox` — the Apply hook stages it together with `response/` when dirty (see §11).
+7. Commit/push of `statistics.md` happens in §11 together with the first case (via `/save` or `/save-selected`), not as a separate agent-side commit outside those skills.
 
 ### 10. Report
+
+**First** execute §11 (commit and push). Then print the user-facing report below.
 
 Do **not** wrap the user-facing report in a fenced `text` / code block — Markdown links must stay clickable.
 
@@ -222,51 +225,36 @@ Rules for each bullet:
 - Do **not** repeat measure bullets in the report (they live in `statistics.md`).
 - If statistics were not updated — omit this block.
 
-4. Footer — if at least one `response.md` was **created** in this run:
-
-If `statistics.md` was updated in this run:
-
-```markdown
-Чтобы сохраниться, нажмите `Apply` на ответ ↑ и на [статистику](statistics.md) — агент сделает всё остальное.
-```
-
-Otherwise:
-
-```markdown
-Чтобы сохраниться, откройте ответ ↑ и нажмите сверху кнопку `Apply` — агент сделает всё остальное.
-```
-
-- If Agent auto-applies edits (no Apply UI): the hook still runs on write; keep the same footer wording.
-- If **no** `response.md` was created (all skipped / PDF-only): the Apply hook will not fire — suggest «сохранись» (and push) for those PDF + `statistics.md` changes.
+4. Do **not** print an Apply / «нажмите Apply» footer — saving is done in §11 before or as part of finishing the run. Rely on the short `/save` or `/save-selected` report for commit/push confirmation; do not duplicate a long save narrative in the inbox report.
 
 Pure `/inbox` (no mail) does **not** print a Gmail / Mos-ru intro — only the blocks above.
 
-### 11. Commit and push (on Apply of response.md or statistics.md)
+### 11. Commit and push (immediate — no Apply)
 
-Do **not** ask for confirmation (no AskQuestion / no «ок»). Do **not** run `git commit` or `git push` from the agent during `/inbox`.
+Do **not** ask for confirmation (no AskQuestion / no «ок»). After steps 1–9 (all PDFs processed, `statistics.md` updated when applicable), save **before** finishing — do not wait for the user to Apply files.
 
-Saving is handled by the project hook [`.cursor/hooks/inbox-commit-push.sh`](../../../.cursor/hooks/inbox-commit-push.sh) on `afterFileEdit` when `<case>/response/response.md` or root `statistics.md` is written/Applied:
+Count **successful cases** = PDFs successfully moved to a case in this run (same set as in §9). Leave unmatched PDFs in `inbox/` out of every path list.
 
-1. Stages the relevant `<case>/response/` (PDF + `response.md`; ignores `_pdf_pages/`).
-2. Stages root `statistics.md` when present.
-3. **Apply on `response.md`:** stages that case’s `response/` plus dirty `statistics.md`.
-4. **Apply on `statistics.md`:** stages `statistics.md` plus any dirty files under `*/response/` (so response and stats commit together regardless of Apply order).
-5. Commits with:
-   ```text
-   Add response to #<id> about <parent>/<case>
-   ```
-   - `<id>` from sibling `request/request.md` (`Номера обращений:` — prefer Дептранс, else first numeric id); if no id — `Add response about <parent>/<case>`.
-   - `<case>` = folder that contains `response/` (e.g. `16-th-parkovaya-18` or `attempt-2`); `<parent>` = one level above it (e.g. `bike-friendly-drain-grates` or `zapovednaya`).
-   - Several cases staged together: `Add agency response and statistics`.
-6. Pushes the current branch.
+**One successful case:**
 
-On several Applies in one run: the first commit usually takes `statistics.md`; later commits only that case’s `response/` if stats are already clean.
+1. `git add .`
+2. Read and execute [`/save`](../save/SKILL.md) (full skill workflow: commit message rules, commit, push, report).
+
+**Several successful cases** (same order as processing):
+
+For each case `i = 1..N`:
+
+1. Build an explicit path list:
+   - `<case_i>/response/` (PDF, `response.md`, `photos/`, …)
+   - If `i == 1` **and** `statistics.md` was changed in this run — also include `statistics.md`
+2. Read and execute [`/save-selected`](../save-selected/SKILL.md), **passing that path list**.
+3. `/inbox` itself does **not** run `git add` for the multi-case path — staging is `/save-selected`’s job.
 
 Limits:
 
-- One Apply of `response.md` or `statistics.md` → one commit (paired `response/` + dirty `statistics.md` when present).
-- Several cases in one `/inbox` run → several Applies → several commits.
-- Unrelated dirty files outside `*/response/` and `statistics.md` are not included.
+- One case → one `/save` commit (may include unrelated dirty files because of `git add .`).
+- N cases → N `/save-selected` commits; first usually carries `statistics.md`.
+- Unmatched / skipped PDFs and unrelated dirty files are not added to `/save-selected` lists.
 
 ## Safety Rules
 
@@ -276,7 +264,7 @@ Limits:
 - Do not invent measures or change statistics counters except from successfully processed responses in this run.
 - Do not change **Обращений подано** from `/inbox`.
 - Do not invent photo files; only save what `extract-response-photos` actually writes.
-- Do not commit or push from the agent during `/inbox`; leave that to the Apply/`afterFileEdit` hook (which includes dirty `statistics.md`).
+- Commit and push only via `/save` (single case) or `/save-selected` (several cases); do not rely on an Apply / `afterFileEdit` hook.
 
 ## Expected User Phrases
 
