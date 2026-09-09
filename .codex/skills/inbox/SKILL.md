@@ -191,21 +191,21 @@ Structure:
 ```markdown
 Сохранённые ответы:
 
-- [16-я Парковая, 35 — Мосводосток заменил решётку](VAO/bike-friendly-drain-grates/16-th-parkovaya-35/response/response.md)
+- [16-я Парковая, 35](VAO/bike-friendly-drain-grates/16-th-parkovaya-35/response/response.md) — Мосводосток заменил решётку
 ```
 
 Rules for each bullet:
 
-- Link text = one short line: location/object — essence of the agency reply (same style as measure bullets in `statistics.md`).
+- Link text = location/object only (before the dash). After the link: ` — essence` of the agency reply (same style as measure bullets in `statistics.md`).
 - Href = repo-relative path to that case’s `response/response.md`.
 - Write the summary from the response already read (after `pdf-to-text`); do not invent.
 - No long quotes; no score in the normal case.
 - Low-confidence match: after the bullet, a short note + 2–3 alternatives.
-- If `response.md` was skipped (already existed): still link it with a summary + `— пропущен` (or without summary if there is no text).
+- If `response.md` was skipped (already existed): `[location](path) — essence — пропущен` (or `[location](path) — пропущен` if there is no text).
 - If photos were extracted in step 8: append to the same bullet `, [фото](<repo-relative path to the saved JPEG>)`. Example:
 
 ```markdown
-- [16-я Парковая, 18 — Мосводосток заменил решётку](VAO/bike-friendly-drain-grates/16-th-parkovaya-18/response/response.md), [фото](VAO/bike-friendly-drain-grates/16-th-parkovaya-18/response/photos/16-th-parkovaya-18-result.jpg)
+- [16-я Парковая, 18](VAO/bike-friendly-drain-grates/16-th-parkovaya-18/response/response.md) — Мосводосток заменил решётку, [фото](VAO/bike-friendly-drain-grates/16-th-parkovaya-18/response/photos/16-th-parkovaya-18-result.jpg)
 ```
 
 - Href of `[фото]` — the concrete file from step 8 (e.g. `{case}-result.jpg`), not the folder. Several photos: `, [фото](…/result1.jpg), [фото 2](…/result2.jpg)`.

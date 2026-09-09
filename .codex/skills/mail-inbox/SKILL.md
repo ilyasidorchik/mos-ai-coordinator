@@ -201,7 +201,7 @@ User-facing report — Markdown, **not** wrapped in a fenced `text` block. No pe
 
 Then print the usual `/inbox` report blocks from [`inbox/SKILL.md`](../inbox/SKILL.md) §10:
 
-- Plain line `Сохранённые ответы:` (not a markdown heading) with bullets `[краткое резюме](<case>/response/response.md)`
+- Plain line `Сохранённые ответы:` (not a markdown heading) with bullets `[локация](<case>/response/response.md) — суть`
 - `[Статистика](statistics.md) обновлена:` when stats changed
 
 (Saving already ran inside `/inbox` §11 — no Apply footer.)
