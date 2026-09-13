@@ -1,9 +1,10 @@
 ---
 name: telegram
 description: >-
-  Publishes a response-result photo and caption to the Telegram channel via
-  Upload-Post MCP. Use when the user mentions /telegram, «отправь в Telegram»,
-  «поделись ответом в канал», or asks to post a case response photo to Telegram.
+  Publishes a response-result photo and caption to the Telegram channel via the
+  local send.mjs script (Telegram Bot API). Use when the user mentions /telegram,
+  «отправь в Telegram», «поделись ответом в канал», or asks to post a case
+  response photo to Telegram.
 disable-model-invocation: true
 ---
 
@@ -11,18 +12,20 @@ disable-model-invocation: true
 
 ## Overview
 
-By **explicit** command only: post to the user's Telegram channel (Upload-Post
-profile and channel username from project [`.env`](../../../.env)) a result
-photo from `<case>/response/photos/` with a short caption (outcome +
+By **explicit** command only: post to the user's Telegram channel a result photo
+from `<case>/response/photos/` with a short HTML caption (outcome +
 district/address + coordinates).
+
+Publishing goes through [`scripts/send.mjs`](scripts/send.mjs) — a zero-dependency
+Node script calling the Telegram Bot API. It works the same locally and in Cloud
+Agents (phone / web).
 
 Do **not** run from `/inbox` or other skills unless the user asks for `/telegram`.
 
 Do **not** wait for a caption draft «ок» — build the caption and publish
-immediately. Do **not** set `requestSmartModeApproval` / do not pause for
-manual MCP or network confirmation: this repo’s
-[`.cursor/permissions.json`](../../permissions.json) allowlists the
-Upload-Post publish tools and steers Auto-review for the staging `curl` PUT.
+immediately. Do **not** pause for manual confirmation: this repo’s
+[`.cursor/permissions.json`](../../../.cursor/permissions.json) allows running
+the script for this skill.
 
 ## Expected user phrases
 
@@ -33,21 +36,23 @@ Upload-Post publish tools and steers Auto-review for the staging `curl` PUT.
 
 ## Workflow
 
-### 0. Load local config
+### 0. Config
 
-Read [`.env`](../../../.env) at the repo root (create from
-[`.env.example`](../../../.env.example) if missing). Required keys:
+The script reads credentials itself:
 
-| Key | Use |
+| Key | Where |
 | --- | --- |
-| `UPLOAD_POST_USER` | Upload-Post profile (`user` in `upload_photos`) |
-| `TELEGRAM_CHANNEL_USERNAME` | Public channel username **without** `@` (post link) |
+| `TELEGRAM_BOT_TOKEN` | `.env` locally; Runtime Secret in Cloud Agents |
+| `TELEGRAM_CHAT_ID` | same |
+| `TELEGRAM_CHANNEL_USERNAME` | same (used to build the post link) |
 
-If the file is missing or either value is empty — **stop**, tell the user to
-copy `.env.example` → `.env` and fill both. Do **not** invent defaults and do
-**not** fall back to any hardcoded profile or channel.
+`process.env` wins over `.env`, so on mobile / web the secrets from
+cursor.com → Cloud Agents → Secrets are used automatically.
 
-Strip a leading `@` from `TELEGRAM_CHANNEL_USERNAME` if the user included one.
+Do **not** read, echo, or pass the token yourself. If the script exits with
+`TELEGRAM_BOT_TOKEN is not set` — stop and tell the user to fill
+[`.env`](../../../.env) (copy from [`.env.example`](../../../.env.example)) or add
+the secrets in the dashboard.
 
 ### 1. Resolve the case
 
@@ -65,18 +70,17 @@ For series (`attempt-N` / dated folders), use that iteration’s folders.
 - District code — first path segment under the repo root (`VAO`, `SVAO`, …)
 - `response/photos/` — result JPEGs
 
-### 3. Pick photos
+### 3. Pick photo
 
 - Prefer JPEGs whose names contain `-result` before the extension
   (e.g. `…-result.jpg`, `…-result1.jpg`, `…-result2.jpg`) — same convention as
   [`extract-response-photos`](../extract-response-photos/SKILL.md).
-- Sort lexicographically.
-- One file → one photo; several → all in one `upload_photos` call (carousel).
+- Sort lexicographically and post **one** photo: the first after sorting.
 - If none — **stop**, say so, do **not** post text-only.
 
-### 4. Build caption
+### 4. Build caption (Telegram HTML)
 
-Three blocks separated by a blank line:
+Three blocks separated by a blank line, sent with `parse_mode: HTML`:
 
 ```text
 <итог>
@@ -85,15 +89,33 @@ Three blocks separated by a blank line:
 <координаты>
 ```
 
-#### 4.1 Outcome (`итог`)
+#### 4.1 HTML escaping and allowed tags
+
+Escape plain text: `&` → `&amp;`, `<` → `&lt;`, `>` → `&gt;` **outside** tags.
+
+Allowed tags (use sparingly): `<b>`, `<i>`, `<code>`, `<blockquote>`,
+`<a href="…">…</a>`.
+
+Example with quote and link:
+
+```html
+ЦОДД ответил про правила на велокольце. К сожалению, кратко:
+<blockquote>Согласно п. 13.1 ПДД РФ …</blockquote>
+— полный текст <a href="https://github.com/…">на Гитхабе</a>
+```
+
+For the default `/telegram` result caption, plain text (after escaping) is
+enough; add HTML only when the outcome needs emphasis, a quote, or a link.
+
+#### 4.2 Outcome (`итог`)
 
 One short phrase from `response.md`: what was done / what the agency answered.
 Infostyle, no bureaucracy, no sarcasm. Apply typography like [`typograf`](../typograf/SKILL.md)
-(nbsp where appropriate).
+(nbsp where appropriate), then escape for HTML.
 
-Example: `Поменяли решётку на безопасную`
+Example: `Поменяли решётку на безопасную`
 
-#### 4.2 District + address
+#### 4.3 District + address
 
 Map folder code → Cyrillic abbreviation:
 
@@ -115,15 +137,15 @@ Unknown code — use the folder name as-is; do not invent a Cyrillic form.
 
 Address from `request.md` / `response.md` (street, house). Join with a comma:
 
-`ВАО, 16-я Парковая ул., д. 18`
+`ВАО, 16-я Парковая ул., д. 18`
 
-#### 4.3 Coordinates
+#### 4.4 Coordinates
 
 From `request.md` lines like `Координаты…: 55.802714, 37.830194` — keep the
 numbers as written: plain `lat, lon`.
 
-Do **not** add maps URLs, Markdown `[text](url)`, or HTML links — Upload-Post
-sends captions as plain text without `parse_mode`, and we post coordinates only.
+Do **not** add maps URLs to the default caption. Inline `<a href>` links are
+allowed when the user asks for a GitHub / docs link in the post.
 
 If there are no coordinates — omit this block; post outcome + district/address
 only.
@@ -131,53 +153,51 @@ only.
 **Etalon:**
 
 ```text
-Поменяли решётку на безопасную
+Поменяли решётку на безопасную
 
-ВАО, 16-я Парковая ул., д. 18
+ВАО, 16-я Парковая ул., д. 18
 55.802714, 37.830194
 ```
 
-### 5. Publish via Upload-Post MCP (`user-upload-post`)
+### 5. Publish
 
-The hosted MCP **cannot** read local disk paths. For each photo:
+Run the script from the repo root, passing the caption on stdin so multi-line
+HTML needs no shell escaping:
 
-1. `create_media_upload` — `filename`, `contentType` (`image/jpeg`),
-   `contentLength` (bytes on disk), `mediaType`: `image`.
-2. `PUT` the file bytes to the returned `upload_url` with header
-   `Content-Type: image/jpeg` (e.g. `curl --data-binary @path`).
-3. `complete_media_upload` with `uploadId` → get `media_url`.
-4. After all photos are staged, call `upload_photos`:
+```bash
+printf '%s' "$CAPTION" | node .codex/skills/telegram/scripts/send.mjs \
+  --photo /abs/path/to/…-result.jpg \
+  --caption-file -
+```
 
-| Field | Value |
-| --- | --- |
-| `user` | `UPLOAD_POST_USER` from `.env` |
-| `platforms` | `["telegram"]` |
-| `title` | full caption from step 4 |
-| `photosPathsOrUrls` | list of `media_url` values |
-| `asyncUpload` | `false` |
+The photo path must be absolute and inside the repository. For a text-only post
+(when the user explicitly asks for one) use `--text-file -` instead of
+`--photo` / `--caption-file`.
 
-If MCP is missing / not authenticated — stop and say so; do not fake a post.
+The script prints JSON to stdout:
+
+```json
+{ "message_id": 21, "chat_id": -1001234567890, "link": "https://t.me/<channel>/21" }
+```
+
+A non-zero exit means nothing was posted — report the stderr message (e.g.
+`Telegram API error: can't parse entities: …` means the HTML is malformed; fix
+the caption and retry). Do not fake a post.
 
 ### 6. Report
 
 After a successful publish, reply briefly with:
 
-1. What was posted (caption paraphrase / photo count).
-2. **Post link** — mandatory. Prefer non-null `results.telegram.url` (or
-   `post_url` from job status). If Upload-Post returns `url` / `post_url` as
-   null (usual for Telegram), build:
-
-   `https://t.me/<TELEGRAM_CHANNEL_USERNAME>/<post_id>`
-
-   where `<TELEGRAM_CHANNEL_USERNAME>` is from `.env` and `<post_id>` is
-   `results.telegram.post_id` (message id in the channel).
+1. What was posted (caption paraphrase / that one photo was sent).
+2. **Post link** — mandatory, from `link` in the JSON output. If `link` is null
+   (no `TELEGRAM_CHANNEL_USERNAME`), report `message_id` and say the link cannot
+   be built.
 
 ## Safety rules
 
 - Do not post without an explicit user command for this skill.
 - Do not invent coordinates, address, district label, or photos.
-- Do not invent or hardcode Upload-Post profile / channel username — only `.env`.
-- Do not add maps URLs or other links to the caption.
+- Do not read or print the bot token; let the script load it.
 - Do not post text without at least one result photo.
 - Do not commit or push.
 - Do not change `inbox/`, `statistics.md`, or case files as part of this skill.
