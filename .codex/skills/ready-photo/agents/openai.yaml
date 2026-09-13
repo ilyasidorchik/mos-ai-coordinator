@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ready Photo"
+  short_description: "Rename then compress photos for mos.ru"
+  default_prompt: "Use $ready-photo: rename photos via rename-photo, then compress each via compress-photo."

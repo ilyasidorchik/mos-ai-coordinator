@@ -80,7 +80,6 @@ The script must keep retrying with slightly stronger compression until the resul
 
 - `Сожми это фото`
 - `Compress this photo with Squoosh`
-- `Подготовь фото для отправки`
 - `Можно ли PNG перевести в JPG?`
 - `@case/request/photos/file.jpeg` with a compression request
 

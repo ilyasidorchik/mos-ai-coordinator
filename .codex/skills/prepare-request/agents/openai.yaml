@@ -1,4 +1,4 @@
 interface:
   display_name: "Prepare Request"
-  short_description: "Rename/compress photos, review request.md, typograf"
-  default_prompt: "Use $prepare-request: first rename and compress all photos in request/photos/, then review and prepare the appeal in request.md with typograf."
+  short_description: "Prepare photos via ready-photo, review request.md, typograf"
+  default_prompt: "Use $prepare-request: first prepare photos via ready-photo, then review and prepare the appeal in request.md with typograf."
