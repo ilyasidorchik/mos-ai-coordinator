@@ -1,4 +1,4 @@
 interface:
   display_name: "GitHub link"
   short_description: "Build GitHub blob URL for a file in this repo"
-  default_prompt: "Use $github-link to print the GitHub blob URL for the current or mentioned file."
+  default_prompt: "Use github-link (with or without slash) to print the GitHub blob URL for the current or mentioned file."

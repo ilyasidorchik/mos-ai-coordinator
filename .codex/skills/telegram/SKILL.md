@@ -1,29 +1,33 @@
 ---
 name: telegram
 description: >-
-  Publishes a response-result photo and caption to the Telegram channel via the
-  local send.mjs script (Telegram Bot API). Use when the user mentions /telegram,
-  «отправь в Telegram», «поделись ответом в канал», or asks to post a case
-  response photo to Telegram.
+  Publishes a photo and caption to the Telegram channel via the local send.mjs
+  script (Telegram Bot API). Use when the user mentions /telegram, «напиши в
+  тг», «отправь в Telegram», «поделись ответом в канал», or asks to post a case
+  photo/caption to Telegram — either a default response-result post or a
+  custom caption/photo the user supplies.
 disable-model-invocation: true
 ---
 
-# Telegram (post response result)
+# Telegram
 
 ## Overview
 
-By **explicit** command only: post to the user's Telegram channel a result photo
-from `<case>/response/photos/` with a short HTML caption (outcome +
-district/address + coordinates).
+By **explicit** command only: post to the user's Telegram channel via
+[`scripts/send.mjs`](scripts/send.mjs) (Bot API; works locally and in Cloud
+Agents).
 
-Publishing goes through [`scripts/send.mjs`](scripts/send.mjs) — a zero-dependency
-Node script calling the Telegram Bot API. It works the same locally and in Cloud
-Agents (phone / web).
+Two modes:
+
+1. **User-supplied caption** — the user pastes (or clearly marks) the exact
+   message text and optionally a photo. Follow §4a.
+2. **Default response-result** — `/telegram` on a case with no custom text.
+   Build the short outcome caption from files. Follow §1–4 (default).
 
 Do **not** run from `/inbox` or other skills unless the user asks for `/telegram`.
 
-Do **not** wait for a caption draft «ок» — build the caption and publish
-immediately. Do **not** pause for manual confirmation: this repo’s
+Do **not** wait for a caption draft «ок» — publish immediately. Do **not** pause
+for manual confirmation: this repo’s
 [`.cursor/permissions.json`](../../../.cursor/permissions.json) allows running
 the script for this skill.
 
@@ -31,8 +35,9 @@ the script for this skill.
 
 - `/telegram`
 - `/telegram` + `@…/response` or a case path
-- «Отправь в Telegram»
+- «Напиши в тг» / «Отправь в Telegram»
 - «Поделись ответом в канал»
+- Custom text after a colon / blank line, often with «где … — ссылка…» and a photo `@…`
 
 ## Workflow
 
@@ -78,7 +83,41 @@ For series (`attempt-N` / dated folders), use that iteration’s folders.
 - Sort lexicographically and post **one** photo: the first after sorting.
 - If none — **stop**, say so, do **not** post text-only.
 
-### 4. Build caption (Telegram HTML)
+### 4a. User-supplied caption (verbatim)
+
+If the user gives the message body (pasted lines, block after «:», or «текст:»),
+that text is the caption. **Do not rewrite it.**
+
+Allowed changes only:
+
+- typography like [`typograf`](../typograf/SKILL.md) (nbsp, guillemets, em dash);
+- HTML escape of plain text (§4.1);
+- markup the user asked for (e.g. «где обращение — ссылка на …» → wrap that
+  word in `<a href="…">…</a>`; resolve the URL via [`github-link`](../github-link/SKILL.md)).
+
+**Forbidden** unless the user explicitly asks («допиши», «переформулируй»,
+«добавь…»):
+
+- new sentences, clauses, or stock phrases from this skill’s examples;
+- replacing their wording with the default outcome / district / coordinates
+  template;
+- moving the link onto different words than they named.
+
+Photo: use the path they `@` / named; it may be under `request/photos/`, not
+only `response/photos/`. If they asked for a photo and none is given — stop and
+ask; do not post text-only unless they asked for text-only.
+
+Etalon (user text + link on «обращение»):
+
+```html
+Нет понижения бордюра после велопереезда на Барклая у Парка Фили.
+
+Подал <a href="https://github.com/…/request/request.md">обращение</a>
+```
+
+Then skip §4.2–4.4 and go to §5.
+
+### 4. Default caption (Telegram HTML) — only if no user text
 
 Three blocks separated by a blank line, sent with `parse_mode: HTML`:
 
@@ -96,13 +135,16 @@ Escape plain text: `&` → `&amp;`, `<` → `&lt;`, `>` → `&gt;` **outside** t
 Allowed tags (use sparingly): `<b>`, `<i>`, `<code>`, `<blockquote>`,
 `<a href="…">…</a>`.
 
-Example with quote and link:
+When **you** compose a response-result caption and need a quote + GitHub link
+(not when the user already supplied the caption):
 
 ```html
 ЦОДД ответил про правила на велокольце. К сожалению, кратко:
 <blockquote>Согласно п. 13.1 ПДД РФ …</blockquote>
 — полный текст <a href="https://github.com/…">на Гитхабе</a>
 ```
+
+Do **not** paste that stock phrase into a user-supplied caption.
 
 For the default `/telegram` result caption, plain text (after escaping) is
 enough; add HTML only when the outcome needs emphasis, a quote, or a link.
@@ -197,8 +239,11 @@ After a successful publish, reply briefly with:
 
 - Do not post without an explicit user command for this skill.
 - Do not invent coordinates, address, district label, or photos.
+- Do not invent or pad caption text when the user already gave the wording.
 - Do not read or print the bot token; let the script load it.
-- Do not post text without at least one result photo.
+- Default mode: do not post text without at least one result photo from
+  `response/photos/`. User-supplied mode: use their photo path; text-only only
+  if they asked for it.
 - Do not commit or push.
 - Do not change `inbox/`, `statistics.md`, or case files as part of this skill.
 - Do not commit `.env`.
