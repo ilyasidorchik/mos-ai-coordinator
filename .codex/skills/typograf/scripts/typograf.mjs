@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Apply Russian typography to a text file in place.
+ * Apply Russian typography to a text file in place, or stdin → stdout with `-`.
  * Uses typograf (ru) + post-pass for multi-word street names after ул./пр./…
  */
 import { readFileSync, writeFileSync, renameSync, unlinkSync } from "node:fs";
@@ -14,7 +14,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 
 function usage() {
-  console.error("Usage: typograf.mjs <path-to-file>");
+  console.error("Usage: typograf.mjs <path-to-file|->");
   process.exit(1);
 }
 
@@ -41,13 +41,7 @@ function glueStreetNameWords(text) {
   });
 }
 
-function main() {
-  const targetArg = process.argv[2];
-  if (!targetArg || targetArg === "-h" || targetArg === "--help") {
-    usage();
-  }
-
-  const targetPath = resolve(targetArg);
+function createTypograf() {
   let Typograf;
   try {
     Typograf = require("typograf");
@@ -69,10 +63,40 @@ function main() {
   for (const rule of config.enableRule || []) {
     tp.enableRule(rule);
   }
+  return tp;
+}
 
+function execute(text, tp) {
+  return glueStreetNameWords(tp.execute(text));
+}
+
+function readStdin() {
+  return readFileSync(0, "utf8");
+}
+
+function main() {
+  const targetArg = process.argv[2];
+  if (!targetArg || targetArg === "-h" || targetArg === "--help") {
+    usage();
+  }
+
+  const tp = createTypograf();
+
+  if (targetArg === "-") {
+    const original = readStdin();
+    const result = execute(original, tp);
+    process.stdout.write(result);
+    if (result === original) {
+      console.error("unchanged: stdin");
+    } else {
+      console.error("updated: stdin");
+    }
+    return;
+  }
+
+  const targetPath = resolve(targetArg);
   const original = readFileSync(targetPath, "utf8");
-  let result = tp.execute(original);
-  result = glueStreetNameWords(result);
+  const result = execute(original, tp);
 
   if (result === original) {
     console.error(`unchanged: ${targetPath}`);

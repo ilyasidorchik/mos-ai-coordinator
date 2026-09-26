@@ -4,7 +4,7 @@ set -euo pipefail
 usage() {
   cat >&2 <<'EOF'
 Usage:
-  typograf.sh <path-to-file>
+  typograf.sh <path-to-file|->
 EOF
   exit 1
 }
@@ -15,6 +15,20 @@ fi
 
 TARGET="$1"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+ensure_deps() {
+  if [[ ! -d "${SCRIPT_DIR}/node_modules/typograf" ]]; then
+    echo "Installing typograf dependency..." >&2
+    npm install --prefix "$SCRIPT_DIR" --silent
+  fi
+}
+
+# Stdin → stdout: no repo path check
+if [[ "$TARGET" == "-" ]]; then
+  ensure_deps
+  node "${SCRIPT_DIR}/typograf.mjs" -
+  exit $?
+fi
 
 # Resolve to absolute path
 if [[ "$TARGET" != /* ]]; then
@@ -45,9 +59,5 @@ case "$TARGET" in
     ;;
 esac
 
-if [[ ! -d "${SCRIPT_DIR}/node_modules/typograf" ]]; then
-  echo "Installing typograf dependency..." >&2
-  npm install --prefix "$SCRIPT_DIR" --silent
-fi
-
+ensure_deps
 node "${SCRIPT_DIR}/typograf.mjs" "$TARGET"

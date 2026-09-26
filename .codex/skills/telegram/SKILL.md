@@ -95,6 +95,17 @@ Allowed changes only:
 - markup the user asked for (e.g. «где обращение — ссылка на …» → wrap that
   word in `<a href="…">…</a>`; resolve the URL via [`github-link`](../github-link/SKILL.md)).
 
+**Typography before send:** pipe the plain caption (no HTML tags yet) through
+stdin typograf — do **not** write a draft to `/tmp` or any path outside the
+repo:
+
+```bash
+printf '%s' "$PLAIN_CAPTION" | .codex/skills/typograf/scripts/typograf.sh -
+```
+
+Then HTML-escape the result (§4.1) and only **after** that wrap the words the
+user named in `<a href="…">…</a>`. Adding links before typograf can break tags.
+
 **Forbidden** unless the user explicitly asks («допиши», «переформулируй»,
 «добавь…»):
 

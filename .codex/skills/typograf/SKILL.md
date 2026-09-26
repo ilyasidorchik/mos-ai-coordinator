@@ -16,6 +16,10 @@ Apply Russian typography to the text the user points to via the project script
 
 Typical targets: `request/request.md`, draft paragraphs in case folders.
 
+For ephemeral text (Telegram captions, pasted drafts that should not land in a
+repo file) — pipe through stdin mode (`-`), not `/tmp` or other paths outside
+the git root.
+
 ## Rules (what the script does)
 
 - русские кавычки «…»;
@@ -34,7 +38,18 @@ Typical targets: `request/request.md`, draft paragraphs in case folders.
 
 3. Report briefly: `updated` / `unchanged` from the script stderr, and any issues.
 
-If the user pasted text without a file — save it to the intended `request.md` first, then run the script (or ask where to write).
+If the user pasted text that belongs in a case file — save it to the intended
+`request.md` first, then run the script (or ask where to write).
+
+If the text is ephemeral (no file in the repo) — do **not** write to `/tmp`.
+Pipe through stdin:
+
+```bash
+printf '%s' "$TEXT" | .codex/skills/typograf/scripts/typograf.sh -
+```
+
+Stdout is the typografed text; `updated: stdin` / `unchanged: stdin` goes to
+stderr.
 
 ## Expected user phrases
 
@@ -47,5 +62,5 @@ If the user pasted text without a file — save it to the intended `request.md` 
 
 - Do not alter the meaning of official quotes beyond typography the script applies.
 - Do not change numbers, dates, addresses, or reference numbers by hand.
-- Do not typograf files outside the repo (the script refuses paths outside the git root).
+- Do not typograf **files** outside the repo (the script refuses paths outside the git root). Use stdin (`-`) for ephemeral text instead.
 - Do not invent facts or rewrite style beyond typography.
