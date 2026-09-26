@@ -1,8 +1,9 @@
 {
-  // Auto-approve /telegram publish path (local node script, Telegram Bot API).
+  // Auto-approve skill scripts (local node; secrets from .env / Cloud Agents Secrets).
   "autoRun": {
     "allow_instructions": [
-      "When the user invoked /telegram or asked to post a case response result to the Telegram channel, allow running `node .codex/skills/telegram/scripts/send.mjs` with --photo / --caption-file / --text / --text-file arguments for the channel from project .env (TELEGRAM_CHAT_ID)."
+      "When the user invoked /telegram or asked to post a case response result to the Telegram channel, allow running `node .codex/skills/telegram/scripts/send.mjs` with --photo / --caption-file / --text / --text-file arguments for the channel from project .env (TELEGRAM_CHAT_ID).",
+      "When the user invoked /mail-inbox or asked to fetch agency response emails from Gmail, allow running `node .codex/skills/mail-inbox/scripts/fetch-mail.mjs` (optional --dry-run / --query / --max / --label) using Gmail OAuth keys from project .env (GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN)."
     ]
   }
 }

@@ -1,9 +1,9 @@
 ---
 name: mail-inbox
 description: >-
-  Fetches agency response emails from Gmail (sedo@mos.ru originals and
-  forwards), downloads PDF attachments into inbox/, marks messages processed,
-  then runs the inbox skill. Use when the user mentions /mail-inbox,
+  Fetches agency response emails from Gmail via local fetch-mail.mjs (sedo@mos.ru
+  originals and forwards), downloads PDF attachments into inbox/, marks messages
+  processed, then runs the inbox skill. Use when the user mentions /mail-inbox,
   «Разбери почту», «Process the mail», or «Забери ответы из Gmail».
 disable-model-invocation: true
 ---
@@ -15,7 +15,8 @@ disable-model-invocation: true
 Pull official response emails from Gmail into [`inbox/`](../../../inbox/), then
 delegate routing, transcription, and photo extraction to [`inbox`](../inbox/SKILL.md):
 
-1. Find SEDO response emails (originals and forwards).
+1. Find SEDO response emails (originals and forwards) via
+   [`scripts/fetch-mail.mjs`](scripts/fetch-mail.mjs).
 2. Download each PDF into `inbox/`.
 3. Mark the message read and move it to Gmail label `Mos Responses. Processed`.
 4. Run the [`inbox`](../inbox/SKILL.md) skill on whatever was downloaded
@@ -24,31 +25,46 @@ delegate routing, transcription, and photo extraction to [`inbox`](../inbox/SKIL
 
 Do not duplicate inbox matching, `pdf-to-text`, or `extract-response-photos` — always delegate step 4.
 
-## Prerequisites: Gmail MCP
+## Config
 
-Before searching mail, inspect MCP server `user-gmail` (`GetMcpTools`).
+The fetch script reads credentials itself (same pattern as `/telegram`):
 
-If the server is missing, in `needsAuth` / `error`, or required tools are absent:
+| Key | Where |
+| --- | --- |
+| `GMAIL_CLIENT_ID` | `.env` locally; Runtime Secret in Cloud Agents |
+| `GMAIL_CLIENT_SECRET` | same |
+| `GMAIL_REFRESH_TOKEN` | same |
+| `GMAIL_PROCESSED_LABEL` | optional; default `Mos Responses. Processed` |
 
-1. **Stop.** Do not fake downloads, open Gmail in the browser as a workaround, or ask for a password.
-2. Tell the user that `/mail-inbox` needs Gmail MCP (`user-gmail`).
-3. Suggest: set up MCP (`npx gmail-mcp-server setup`, tokens in `~/.gmail-mcp`) **or** drop PDFs into `inbox/` manually and run `/inbox`.
-4. **Do not** run `/inbox` in this pass if nothing was downloaded because MCP was unavailable.
+`process.env` wins over `.env`, so on mobile / web the secrets from
+cursor.com → Cloud Agents → Secrets are used automatically.
 
-If MCP is present but `needsAuth` — call `mcp_auth` for `user-gmail` once; on failure, same stop + manual `inbox/` path.
+Do **not** read, echo, or pass tokens yourself.
 
-Required tools: `gmail_search_emails`, `gmail_list_attachments`, `gmail_get_attachment`, `gmail_mark_email`, `gmail_move_email`.
+If the script exits with `GMAIL_* is not set` — stop and tell the user to fill
+[`.env`](../../../.env) (copy from [`.env.example`](../../../.env.example)) or add
+the secrets in the dashboard. Fallback: drop PDFs into `inbox/` manually and run `/inbox`.
+
+If the script exits with `invalid_grant` / expired refresh token — OAuth app is in
+**Testing** (≈7-day tokens). Tell the user to run locally:
+
+```bash
+node .codex/skills/mail-inbox/scripts/auth.mjs
+```
+
+Then paste the new `GMAIL_REFRESH_TOKEN` into `.env` and Cloud Agents Secrets.
+Do **not** open Gmail in the browser as a substitute, and do not ask for a password.
 
 ## Scope
 
-Only citizen-appeal **response** emails:
+Only citizen-appeal **response** emails (enforced inside the script):
 
 - **Original:** `from` contains `sedo@mos.ru`, subject like «Ответ … на обращение гражданина».
 - **Forward:** `from` is not SEDO, but subject matches `/^(Fwd|FW|Fw|Пересл|Пересылка):/i` and/or snippet mentions `sedo@mos.ru`, with the same subject pattern.
 
 Download **only** `application/pdf` attachments. Skip ZIP «Документ с ЭП», `message/rfc822`, and other parts.
 
-Also skip a PDF whose filename is exactly `Направлен.pdf` (case-sensitive basename). In SEDO forwards this is usually a second attachment — a duplicate scan of the same letter already inside the mos.ru export PDF. Do not download it; keep only the mos.ru-named PDF (typically index `0`).
+Also skip a PDF whose filename is exactly `Направлен.pdf` (case-sensitive basename). In SEDO forwards this is usually a second attachment — a duplicate scan of the same letter already inside the mos.ru export PDF.
 
 ## Workflow
 
@@ -57,107 +73,38 @@ Also skip a PDF whose filename is exactly `Направлен.pdf` (case-sensiti
 Before tool calls, tell the user in one short line (exact wording):
 
 ```text
-Забираю ответы из Gmail по skill `/mail-inbox`: сначала проверю MCP и найду письма от Мос-ру
+Забираю ответы из Gmail по skill `/mail-inbox`: запускаю скрипт и ищу письма от Мос-ру
 ```
 
-### 1. Search (metadata only — cheap)
+### 1. Run the script
 
-Call `gmail_search_emails` with a query equivalent to:
+Do **not** wait for confirmation. This repo’s
+[`.cursor/permissions.json`](../../../.cursor/permissions.json) allows running the script.
 
-```text
-in:inbox ("на обращение гражданина") (from:sedo@mos.ru OR subject:Fwd OR subject:FW OR "sedo@mos.ru")
+```bash
+node .codex/skills/mail-inbox/scripts/fetch-mail.mjs
 ```
 
-Classify each hit from search metadata (do not read the full body unless needed):
+Parse the JSON on stdout:
 
-1. `From` contains `sedo@mos.ru` → original.
-2. Subject matches `/^(Fwd|FW|Fw|Пересл|Пересылка):/i` **or** snippet contains `sedo@mos.ru` → forward of SEDO.
-3. Otherwise → skip and note in the report.
+| Field | Meaning |
+| --- | --- |
+| `accepted` | SEDO emails (original / forward) the script classified |
+| `downloaded` | PDF files written under `inbox/` (`file`, `bytes`) |
+| `skipped` | exists / not_sedo / unsafe_name — do not dump in the user report |
+| `label` | `{ name, id, created }` — `created: true` → mention «лейбл создан» only if useful |
+| `errors` | per-message failures — continue; note in report only if something failed |
+| `dryRun` | should be `false` for the real run |
 
-If there are no matching emails — report and **do not** run `/inbox`.
+- If the process exits non-zero and stdout has no useful `downloaded` — stop; explain the stderr hint (missing env / `invalid_grant` → `auth.mjs`); do **not** run `/inbox`.
+- If `accepted.length === 0` and no downloads — empty-inbox report (§5), do **not** run `/inbox`.
+- `N` for the user intro = `accepted.length`.
 
-### 2. Process each email in order
+Do not call Gmail MCP. Do not re-implement search / download / label logic outside the script.
 
-For every accepted message:
+### 2. Delegate to inbox
 
-1. `gmail_list_attachments` — collect PDF attachments (`contentType` starts with `application/pdf`).
-2. Skip any PDF whose basename is exactly `Направлен.pdf` (duplicate of the letter inside the mos.ru export). Skip silently — do not mention in the user report.
-3. Download each remaining PDF with `gmail_get_attachment` and `customPath` = absolute path to repo [`inbox/`](../../../inbox/). Prefer the mos.ru export (filename with `идентификатор：`); that is usually index `0`.
-4. Strip the downloader timestamp prefix if present (`2026-07-12T13-39-11-825Z_…` → original mos.ru filename) so `/inbox` can parse `идентификатор： …`.
-5. `gmail_mark_email` with `read: true`.
-6. Move out of Inbox into `Mos Responses. Processed` (see label section below).
-
-One email failing must not stop the rest — record the error and continue.
-
-### 3. Gmail label `Mos Responses. Processed`
-
-`gmail_move_email` requires a Gmail **label id**, not a display name. Passing the name yields `Invalid label`.
-
-Known id for this mailbox (update if resolve finds another):
-
-```text
-Label_3765494894429308866
-```
-
-Move:
-
-```text
-labelId: Label_3765494894429308866
-removeLabelIds: ["INBOX"]
-```
-
-**Resolve / create if needed:**
-
-1. Try move with the constant above.
-2. On `Invalid label` — resolve via Node + `googleapis` using `~/.gmail-mcp/credentials.json` and `~/.gmail-mcp/token.json` (never print tokens). `users.labels.list`, find name exactly `Mos Responses. Processed`.
-3. If the label **does not exist** — create it (`users.labels.create` with that flat name), then move with the new id. Report «лейбл создан».
-4. If an existing label was found under another id — report «использован существующий» and, when editing this repo, update the constant in this skill.
-5. If create/move still fails (scope / API error) — the message may already be read; say explicitly that the PDF was saved but move to `Mos Responses. Processed` failed; suggest creating the label manually. Still proceed to `/inbox` for downloaded PDFs.
-
-Example resolve/create (Node, no token on stdout):
-
-```javascript
-const fs = require('fs');
-const { google } = require(require('path').join(
-  process.env.HOME, 'gmail-mcp/node_modules/googleapis'
-));
-// fallback: require('googleapis') if installed globally / in skill env
-
-async function main() {
-  const creds = JSON.parse(fs.readFileSync(
-    process.env.HOME + '/.gmail-mcp/credentials.json', 'utf8'));
-  const token = JSON.parse(fs.readFileSync(
-    process.env.HOME + '/.gmail-mcp/token.json', 'utf8'));
-  const { client_id, client_secret, redirect_uris } = creds.installed || creds.web;
-  const auth = new google.auth.OAuth2(client_id, client_secret, redirect_uris?.[0]);
-  auth.setCredentials(token);
-  const gmail = google.gmail({ version: 'v1', auth });
-  const name = 'Mos Responses. Processed';
-  const listed = await gmail.users.labels.list({ userId: 'me' });
-  let label = (listed.data.labels || []).find((l) => l.name === name);
-  if (!label) {
-    const created = await gmail.users.labels.create({
-      userId: 'me',
-      requestBody: {
-        name,
-        labelListVisibility: 'labelShow',
-        messageListVisibility: 'show',
-      },
-    });
-    label = created.data;
-    console.log('CREATED\t' + label.id);
-  } else {
-    console.log('EXISTS\t' + label.id);
-  }
-}
-main().catch((e) => { console.error(e.message); process.exit(1); });
-```
-
-Prefer `~/gmail-mcp/node_modules/googleapis` when that install exists from MCP setup.
-
-### 4. Delegate to inbox
-
-If at least one new PDF landed in `inbox/`:
+If at least one new PDF landed in `inbox/` (`downloaded.length ≥ 1`):
 
 1. Read [`inbox/SKILL.md`](../inbox/SKILL.md).
 2. Execute its full workflow (match → move → pdf-to-text → extract photos if attached → update statistics → save via `/save` or `/save-selected` → report).
@@ -166,9 +113,9 @@ Saving (commit + push) is done by the delegated [`inbox`](../inbox/SKILL.md) ski
 
 If no PDF was downloaded — do not run `/inbox`.
 
-### 5. Report
+### 3. Report
 
-User-facing report — Markdown, **not** wrapped in a fenced `text` block. No per-email `Gmail <id>` dump as the main tone (record MCP/label errors only if something failed).
+User-facing report — Markdown, **not** wrapped in a fenced `text` block. No per-email `Gmail <id>` dump as the main tone (record script/label errors only if something failed).
 
 **Intro** (counts by fact; typography per `typograf`):
 
@@ -210,14 +157,14 @@ Do not add a separate technical «Inbox:» heading.
 
 ## Safety Rules
 
-- Only process SEDO response emails as defined in Scope.
+- Only process SEDO response emails as defined in Scope (script enforces this).
 - Only download PDF attachments.
 - Do not download `Направлен.pdf` — it duplicates the letter already in the mos.ru export.
 - Do not mention routine skipped attachments (`Направлен.pdf`, «Документ с ЭП.zip`, non-PDF parts) in the user report.
-- Do not use the browser as a Gmail substitute when MCP is missing.
+- Do not use the browser as a Gmail substitute when the script fails; do not ask for a password.
 - Do not run `/inbox` when this skill downloaded nothing.
 - Do not commit or push from `mail-inbox` itself; delegated `/inbox` saves via `/save` or `/save-selected`.
-- One failed email must not abort the batch.
+- One failed email must not abort the batch (script continues; report errors if needed).
 
 ## Expected User Phrases
 
