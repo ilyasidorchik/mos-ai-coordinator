@@ -236,26 +236,27 @@ Structure (this order):
 ```markdown
 Сохранённый ответ:
 
-- [PDF](VAO/bike-friendly-drain-grates/16-th-parkovaya-35/response/<file>.pdf), [16-я Парковая, 35](VAO/bike-friendly-drain-grates/16-th-parkovaya-35/response/response.md) — Мосводосток заменил решётку
+- [PDF](<VAO/bike-friendly-drain-grates/16-th-parkovaya-35/response/17-65-6736∕26_14.04.2026_Сообщение с mos.ru, идентификатор： 57492186 ….pdf>), [16-я Парковая, 35](VAO/bike-friendly-drain-grates/16-th-parkovaya-35/response/response.md) — Мосводосток заменил решётку
 ```
 
 Rules for each bullet:
 
-- Start with `[PDF](<repo-relative path to the moved PDF>)`, then `, `, then the location link and essence.
+- Start with `[PDF](<path>)`, then `, `, then the location link and essence.
+- **Always** wrap the `[PDF]` destination in literal angle brackets: `[PDF](<…/file.pdf>)`. Mos.ru export basenames contain spaces (and often `∕`, fullwidth `：`, NBSP); without `<…>` Markdown stops the URL at the first space and the chat shows raw `[PDF](…)`. Do not emit bare `[PDF](path with spaces)`.
 - `[PDF]` href = the concrete PDF file just moved into `<case>/response/` (basename after `mv`, including any §6 truncation).
 - Link text for the second link = location/object only (before the dash). After that link: ` — essence` of the agency reply (same style as measure bullets in `statistics.md`).
-- Href of the location link = repo-relative path to that case’s `response/response.md`.
+- Href of the location link = repo-relative path to that case’s `response/response.md` (no spaces → bare `(…)` is fine).
 - Write the summary from the response already read (after `pdf-to-text`); do not invent.
 - No long quotes; no score in the normal case.
 - Low-confidence match: after the bullet, a short note + 2–3 alternatives.
-- If `response.md` was skipped (already existed): `[PDF](…pdf), [location](path) — essence — пропущен` (or `[PDF](…pdf), [location](path) — пропущен` if there is no text).
-- If photos were extracted in step 8: append to the same bullet `, [фото](<repo-relative path to the saved JPEG>)`. Example:
+- If `response.md` was skipped (already existed): `[PDF](<…pdf>), [location](path) — essence — пропущен` (or `[PDF](<…pdf>), [location](path) — пропущен` if there is no text).
+- If photos were extracted in step 8: append to the same bullet `, [фото](<path-to.jpg>)` — also wrap in `<…>` if the path has spaces. Example:
 
 ```markdown
-- [PDF](VAO/bike-friendly-drain-grates/16-th-parkovaya-18/response/<file>.pdf), [16-я Парковая, 18](VAO/bike-friendly-drain-grates/16-th-parkovaya-18/response/response.md) — Мосводосток заменил решётку, [фото](VAO/bike-friendly-drain-grates/16-th-parkovaya-18/response/photos/16-th-parkovaya-18-result.jpg)
+- [PDF](<VAO/bike-friendly-drain-grates/16-th-parkovaya-18/response/17-65-….pdf>), [16-я Парковая, 18](VAO/bike-friendly-drain-grates/16-th-parkovaya-18/response/response.md) — Мосводосток заменил решётку, [фото](VAO/bike-friendly-drain-grates/16-th-parkovaya-18/response/photos/16-th-parkovaya-18-result.jpg)
 ```
 
-- Href of `[фото]` — the concrete file from step 8 (e.g. `{case}-result.jpg`), not the folder. Several photos: `, [фото](…/result1.jpg), [фото 2](…/result2.jpg)`.
+- Href of `[фото]` — the concrete file from step 8 (e.g. `{case}-result.jpg`), not the folder. Several photos: `, [фото](…/result1.jpg), [фото 2](…/result2.jpg)` (or `<…>` form when needed).
 - If photo extraction was triggered but found nothing / failed deps: one short note, do not invent files or a `[фото]` link.
 - Unmatched PDF left in `inbox/`: explain separately; do not invent a case path.
 
