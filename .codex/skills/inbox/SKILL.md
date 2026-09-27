@@ -20,7 +20,8 @@ Process official response PDFs dropped into [`inbox/`](../../../inbox/):
 4. If the response mentions attached photos — run [`extract-response-photos`](../extract-response-photos/SKILL.md).
 5. Update [`statistics.md`](../../../statistics.md).
 6. Save without waiting for the user: one case → `git add .` + [`/save`](../save/SKILL.md); several cases → [`/save-selected`](../save-selected/SKILL.md) per case with an explicit path list.
-7. Report.
+7. Report (statistics → saved responses → Telegram offer).
+8. If the user agrees to the Telegram offer — run [`telegram-report`](../telegram-report/SKILL.md) for the successfully saved cases.
 
 Do not duplicate transcription or photo-crop logic here — always delegate step 3 to `pdf-to-text` and step 4 to `extract-response-photos`.
 
@@ -212,10 +213,23 @@ Do **not** wrap the user-facing report in a fenced `text` / code block — Markd
 
 Do **not** use the old technical lines (`inbox/foo.pdf → … (score …)`, `response.md: создан`).
 
-Structure:
+Structure (this order):
 
-1. Plain line (not a markdown heading): `Сохранённые ответы:` followed by bullets.
-2. One bullet per successfully processed PDF (moved to a case):
+1. If `statistics.md` was updated in this run:
+
+```markdown
+[Статистика](statistics.md) обновлена:
+ответов получено 24→25
+мер принято 5→6
+```
+
+- Link on the word «Статистика».
+- Include «мер принято A→B» only if the measures counter changed; otherwise only «ответов получено …».
+- Do **not** repeat measure bullets in the report (they live in `statistics.md`).
+- If statistics were not updated — omit this block.
+
+2. Plain line (not a markdown heading): `Сохранённые ответы:` followed by bullets.
+3. One bullet per successfully processed PDF (moved to a case):
 
 ```markdown
 Сохранённые ответы:
@@ -241,20 +255,18 @@ Rules for each bullet:
 - If photo extraction was triggered but found nothing / failed deps: one short note, do not invent files or a `[фото]` link.
 - Unmatched PDF left in `inbox/`: explain separately; do not invent a case path.
 
-3. If `statistics.md` was updated in this run:
+4. If there was **at least one** successfully saved response in this run — end with **exactly** this line (NBSP after «в» and «ваш»):
 
 ```markdown
-[Статистика](statistics.md) обновлена:
-ответов получено 24→25
-мер принято 5→6
+Отправлю в ваш Телеграм-канал?
 ```
 
-- Link on the word «Статистика».
-- Include «мер принято A→B» only if the measures counter changed; otherwise only «ответов получено …».
-- Do **not** repeat measure bullets in the report (they live in `statistics.md`).
-- If statistics were not updated — omit this block.
+- Do **not** list cases again; do **not** mention `/telegram-report` to the user.
+- Do **not** publish yet — wait for agreement («да», «отправь», «в тг», …).
+- On agreement: read and execute [`telegram-report`](../telegram-report/SKILL.md) for each successfully processed case from the «Сохранённые ответы» list (processing order). If the user names one case — only that case.
+- If there were no successfully saved responses — omit this question.
 
-4. Do **not** print an Apply / «нажмите Apply» footer — saving is done in §11 before or as part of finishing the run. Rely on the short `/save` or `/save-selected` report for commit/push confirmation; do not duplicate a long save narrative in the inbox report.
+5. Do **not** print an Apply / «нажмите Apply» footer — saving is done in §11 before or as part of finishing the run. Rely on the short `/save` or `/save-selected` report for commit/push confirmation; do not duplicate a long save narrative in the inbox report.
 
 Pure `/inbox` (no mail) does **not** print a Gmail / Mos-ru intro — only the blocks above.
 
@@ -295,6 +307,7 @@ Limits:
 - Do not change **Обращений подано** from `/inbox`.
 - Do not invent photo files; only save what `extract-response-photos` actually writes.
 - Commit and push only via `/save` (single case) or `/save-selected` (several cases); do not rely on an Apply / `afterFileEdit` hook.
+- Do not post to Telegram from `/inbox` without the user’s explicit agreement after the «Отправлю в ваш Телеграм-канал?» offer; on agreement delegate to [`telegram-report`](../telegram-report/SKILL.md).
 
 ## Expected User Phrases
 
