@@ -1,0 +1,4 @@
+interface:
+  display_name: "Compress Video"
+  short_description: "Trim and compress one video to 720p under mos.ru 5 MB"
+  default_prompt: "Use $compress-video to trim (if needed) and compress the specified video to 720p under the mos.ru 5 MB limit."
