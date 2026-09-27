@@ -118,13 +118,42 @@ See [reference.md](reference.md) for real matching examples.
 
 ### 6. Move PDF
 
+ext4 allows **255 bytes** per filename. Before `mv`, ensure the destination basename fits that limit (UTF-8 **bytes**, not characters). Matching in §4–5 already used the full name in `inbox/` — truncate only for the destination.
+
+1. Resolve the destination basename (truncate if needed):
+
 ```bash
-mkdir -p "<case>/response"
-mv "inbox/file.pdf" "<case>/response/"
+DEST_NAME="$(python3 -c "
+import os, sys
+src = sys.argv[1]
+MAX = 255
+base = os.path.basename(src)
+if len(base.encode()) <= MAX:
+    print(base); raise SystemExit
+stem, ext = os.path.splitext(base)
+budget = MAX - len(ext.encode())
+encoded = stem.encode()
+end = budget
+while end > 0 and end < len(encoded) and (encoded[end] & 0xC0) == 0x80:
+    end -= 1
+print(encoded[:end].decode('utf-8') + ext)
+" "inbox/file.pdf")"
 ```
 
-- Do not overwrite an existing PDF in `response/` without explicit user request — skip and report.
+2. Move:
+
+```bash
+mkdir -p "<case>/response"
+mv "inbox/file.pdf" "<case>/response/$DEST_NAME"
+```
+
+Rules:
+
+- If basename ≤ 255 UTF-8 bytes — keep as is (`DEST_NAME` equals the original).
+- If longer — cut the **stem from the end**, keep `.pdf`, result ≤ 255 bytes; do not split a multi-byte character. Prefix (outgoing ref, date, `идентификатор： …`) stays; the title tail is what gets shortened.
+- Do not overwrite an existing PDF in `response/` without explicit user request — skip and report (including after truncation).
 - Do not delete the inbox original if the move fails.
+- Do **not** mention truncation in the user-facing report.
 
 ### 7. Run pdf-to-text
 
@@ -261,6 +290,7 @@ Limits:
 - Process PDFs from `inbox/` only in v1.
 - Do not batch-process PDFs outside `inbox/` unless the user explicitly asks.
 - Do not silently overwrite existing `response.md` or duplicate PDFs in `response/`.
+- Before `mv`, ensure the destination basename is ≤ 255 UTF-8 bytes (ext4 limit); truncate the stem from the end if needed (§6).
 - Do not invent measures or change statistics counters except from successfully processed responses in this run.
 - Do not change **Обращений подано** from `/inbox`.
 - Do not invent photo files; only save what `extract-response-photos` actually writes.
