@@ -215,15 +215,20 @@ Do **not** use the old technical lines (`inbox/foo.pdf → … (score …)`, `re
 
 Structure (this order):
 
+Build every clickable href in this report with
+[`github-link`](../github-link/SKILL.md) **after** §11 push (so the blob exists
+on the current branch). Do **not** use repo-relative paths like
+`(statistics.md)` or `(…/response.md)` — in Cloud Agent chat they do not open.
+
 1. If `statistics.md` was updated in this run:
 
 ```markdown
-[Статистика](statistics.md) обновлена:
+[Статистика](https://github.com/<owner>/<repo>/blob/<branch>/statistics.md) обновлена:
 ответов получено 24→25
 мер принято 5→6
 ```
 
-- Link on the word «Статистика».
+- Link on the word «Статистика»; href = github-link blob URL for `statistics.md`.
 - Include «мер принято A→B» only if the measures counter changed; otherwise only «ответов получено …».
 - Do **not** repeat measure bullets in the report (they live in `statistics.md`).
 - If statistics were not updated — omit this block.
@@ -236,27 +241,29 @@ Structure (this order):
 ```markdown
 Сохранённый ответ:
 
-- [PDF](<VAO/bike-friendly-drain-grates/16-th-parkovaya-35/response/17-65-6736∕26_14.04.2026_Сообщение с mos.ru, идентификатор： 57492186 ….pdf>), [16-я Парковая, 35](VAO/bike-friendly-drain-grates/16-th-parkovaya-35/response/response.md) — Мосводосток заменил решётку
+- [PDF](<https://github.com/<owner>/<repo>/blob/<branch>/VAO/bike-friendly-drain-grates/16-th-parkovaya-35/response/17-65-6736∕26_….pdf>), [16-я Парковая, 35](https://github.com/<owner>/<repo>/blob/<branch>/VAO/bike-friendly-drain-grates/16-th-parkovaya-35/response/response.md) — Мосводосток заменил решётку
 ```
 
 Rules for each bullet:
 
-- Start with `[PDF](<path>)`, then `, `, then the location link and essence.
-- **Always** wrap the `[PDF]` destination in literal angle brackets: `[PDF](<…/file.pdf>)`. Mos.ru export basenames contain spaces (and often `∕`, fullwidth `：`, NBSP); without `<…>` Markdown stops the URL at the first space and the chat shows raw `[PDF](…)`. Do not emit bare `[PDF](path with spaces)`.
-- `[PDF]` href = the concrete PDF file just moved into `<case>/response/` (basename after `mv`, including any §6 truncation).
+- Start with `[PDF](<blob-url>)`, then `, `, then the location link and essence.
+- Resolve each href via [`github-link`](../github-link/SKILL.md) (owner/repo/branch from git; URL-encode path segments). Targets:
+  - `[PDF]` → the concrete PDF just moved into `<case>/response/` (basename after `mv`, including any §6 truncation);
+  - location link → that case’s `response/response.md`;
+  - `[фото]` → the concrete file from step 8 (e.g. `{case}-result.jpg`), not the folder.
+- **Always** wrap the `[PDF]` destination in literal angle brackets: `[PDF](<https://…>)`. Encoded mos.ru basenames are long; `<…>` keeps the markdown link intact. Do not emit repo-relative PDF paths.
 - Link text for the second link = location/object only (before the dash). After that link: ` — essence` of the agency reply (same style as measure bullets in `statistics.md`).
-- Href of the location link = repo-relative path to that case’s `response/response.md` (no spaces → bare `(…)` is fine).
 - Write the summary from the response already read (after `pdf-to-text`); do not invent.
 - No long quotes; no score in the normal case.
 - Low-confidence match: after the bullet, a short note + 2–3 alternatives.
-- If `response.md` was skipped (already existed): `[PDF](<…pdf>), [location](path) — essence — пропущен` (or `[PDF](<…pdf>), [location](path) — пропущен` if there is no text).
-- If photos were extracted in step 8: append to the same bullet `, [фото](<path-to.jpg>)` — also wrap in `<…>` if the path has spaces. Example:
+- If `response.md` was skipped (already existed): `[PDF](<blob>), [location](blob) — essence — пропущен` (or `[PDF](<blob>), [location](blob) — пропущен` if there is no text).
+- If photos were extracted in step 8: append to the same bullet `, [фото](blob-url)` (use `<…>` if needed). Example:
 
 ```markdown
-- [PDF](<VAO/bike-friendly-drain-grates/16-th-parkovaya-18/response/17-65-….pdf>), [16-я Парковая, 18](VAO/bike-friendly-drain-grates/16-th-parkovaya-18/response/response.md) — Мосводосток заменил решётку, [фото](VAO/bike-friendly-drain-grates/16-th-parkovaya-18/response/photos/16-th-parkovaya-18-result.jpg)
+- [PDF](<https://github.com/<owner>/<repo>/blob/<branch>/VAO/…/16-th-parkovaya-18/response/….pdf>), [16-я Парковая, 18](https://github.com/<owner>/<repo>/blob/<branch>/VAO/…/16-th-parkovaya-18/response/response.md) — Мосводосток заменил решётку, [фото](https://github.com/<owner>/<repo>/blob/<branch>/VAO/…/photos/16-th-parkovaya-18-result.jpg)
 ```
 
-- Href of `[фото]` — the concrete file from step 8 (e.g. `{case}-result.jpg`), not the folder. Several photos: `, [фото](…/result1.jpg), [фото 2](…/result2.jpg)` (or `<…>` form when needed).
+- Several photos: `, [фото](blob1), [фото 2](blob2)`.
 - If photo extraction was triggered but found nothing / failed deps: one short note, do not invent files or a `[фото]` link.
 - Unmatched PDF left in `inbox/`: explain separately; do not invent a case path.
 
@@ -313,6 +320,7 @@ Limits:
 - Do not invent photo files; only save what `extract-response-photos` actually writes.
 - Commit and push only via `/save` (single case) or `/save-selected` (several cases); do not rely on an Apply / `afterFileEdit` hook.
 - Do not post to Telegram from `/inbox` without the user’s explicit agreement after the «Отправлю в ваш Телеграм-канал?» offer; on agreement delegate to [`telegram-report`](../telegram-report/SKILL.md).
+- Do not put repo-relative paths in user-facing report links; use [`github-link`](../github-link/SKILL.md) blob URLs after §11 push.
 
 ## Expected User Phrases
 
