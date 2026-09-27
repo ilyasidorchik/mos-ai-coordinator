@@ -124,7 +124,7 @@ User-facing report — Markdown, **not** wrapped in a fenced `text` block. No pe
 ```markdown
 Пришло 1 письмо от Мос-ру с ответом на ваше обращение.
 
-Из каждого письма скачан PDF-файл и добавлена текстовая расшифровка. Письма помечены прочитанными и перемещены из «Входящих» в папку `Mos Responses. Processed`.
+Из письма скачан PDF-файл и добавлена текстовая расшифровка. Письмо помечено прочитанным и перемещено из «Входящих» в папку `Mos Responses. Processed`.
 ```
 
 ```markdown
@@ -134,12 +134,12 @@ User-facing report — Markdown, **not** wrapped in a fenced `text` block. No pe
 ```
 
 - `N` = accepted SEDO emails (original or forward).
-- **N = 1** — use the first intro (singular: «1 письмо», «с ответом на ваше обращение»).
+- **N = 1** — use the first intro (singular throughout: «1 письмо», «с ответом на ваше обращение», «Из письма…», «Письмо помечено… и перемещено…»).
 - **N ≥ 2** — use the second intro; substitute the actual count for `N`.
 - Write **«Мос-ру» through a hyphen**, never «Мос.ру».
-- If a PDF was not downloaded from every email due to a **failure** (not routine skip) — adjust the second sentence; do not claim «из каждого» when false.
+- If a PDF was not downloaded from every email due to a **failure** (not routine skip) — adjust the second sentence; do not claim «из каждого» / «из письма» when false.
 - **Do not mention** routine skipped attachments in the report: ZIP «Документ с ЭП», `Направлен.pdf`, `message/rfc822`, or other non-PDF parts.
-- If in this run `/inbox` extracted photo attachments — extend the second sentence, e.g. «…текстовая расшифровка, а также фото из приложений.» Only when at least one photo file was actually saved.
+- If in this run `/inbox` extracted photo attachments — extend the second sentence, e.g. «…текстовая расшифровка, а также фото из приложений.» Only when at least one photo file was actually saved. Keep singular/plural agreement with N.
 - If `N` = 0 — use this exact text (two paragraphs) and do **not** run `/inbox`:
 
 ```markdown
@@ -148,10 +148,11 @@ User-facing report — Markdown, **not** wrapped in a fenced `text` block. No pe
 Чтобы я помог составить новое обращение, напишите мне `/new идея обращения`
 ```
 
-Then print the usual `/inbox` report blocks from [`inbox/SKILL.md`](../inbox/SKILL.md) §10:
+Then print the usual `/inbox` report blocks from [`inbox/SKILL.md`](../inbox/SKILL.md) §10 **in that skill’s order**:
 
-- Plain line `Сохранённые ответы:` (not a markdown heading) with bullets `[локация](<case>/response/response.md) — суть`
-- `[Статистика](statistics.md) обновлена:` when stats changed
+1. `[Статистика](statistics.md) обновлена:` when stats changed
+2. Plain line `Сохранённые ответы:` (not a markdown heading) with bullets `[локация](<case>/response/response.md) — суть`
+3. Telegram offer `Отправлю в ваш Телеграм-канал?` when there was at least one successfully saved response (agreement → `/telegram-report` per inbox §10)
 
 (Saving already ran inside `/inbox` §11 — no Apply footer.)
 
