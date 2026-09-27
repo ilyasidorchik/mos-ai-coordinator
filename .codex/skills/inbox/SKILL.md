@@ -236,21 +236,23 @@ Structure (this order):
 ```markdown
 Сохранённый ответ:
 
-- [16-я Парковая, 35](VAO/bike-friendly-drain-grates/16-th-parkovaya-35/response/response.md) — Мосводосток заменил решётку
+- [PDF](VAO/bike-friendly-drain-grates/16-th-parkovaya-35/response/<file>.pdf), [16-я Парковая, 35](VAO/bike-friendly-drain-grates/16-th-parkovaya-35/response/response.md) — Мосводосток заменил решётку
 ```
 
 Rules for each bullet:
 
-- Link text = location/object only (before the dash). After the link: ` — essence` of the agency reply (same style as measure bullets in `statistics.md`).
-- Href = repo-relative path to that case’s `response/response.md`.
+- Start with `[PDF](<repo-relative path to the moved PDF>)`, then `, `, then the location link and essence.
+- `[PDF]` href = the concrete PDF file just moved into `<case>/response/` (basename after `mv`, including any §6 truncation).
+- Link text for the second link = location/object only (before the dash). After that link: ` — essence` of the agency reply (same style as measure bullets in `statistics.md`).
+- Href of the location link = repo-relative path to that case’s `response/response.md`.
 - Write the summary from the response already read (after `pdf-to-text`); do not invent.
 - No long quotes; no score in the normal case.
 - Low-confidence match: after the bullet, a short note + 2–3 alternatives.
-- If `response.md` was skipped (already existed): `[location](path) — essence — пропущен` (or `[location](path) — пропущен` if there is no text).
+- If `response.md` was skipped (already existed): `[PDF](…pdf), [location](path) — essence — пропущен` (or `[PDF](…pdf), [location](path) — пропущен` if there is no text).
 - If photos were extracted in step 8: append to the same bullet `, [фото](<repo-relative path to the saved JPEG>)`. Example:
 
 ```markdown
-- [16-я Парковая, 18](VAO/bike-friendly-drain-grates/16-th-parkovaya-18/response/response.md) — Мосводосток заменил решётку, [фото](VAO/bike-friendly-drain-grates/16-th-parkovaya-18/response/photos/16-th-parkovaya-18-result.jpg)
+- [PDF](VAO/bike-friendly-drain-grates/16-th-parkovaya-18/response/<file>.pdf), [16-я Парковая, 18](VAO/bike-friendly-drain-grates/16-th-parkovaya-18/response/response.md) — Мосводосток заменил решётку, [фото](VAO/bike-friendly-drain-grates/16-th-parkovaya-18/response/photos/16-th-parkovaya-18-result.jpg)
 ```
 
 - Href of `[фото]` — the concrete file from step 8 (e.g. `{case}-result.jpg`), not the folder. Several photos: `, [фото](…/result1.jpg), [фото 2](…/result2.jpg)`.
