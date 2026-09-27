@@ -92,6 +92,22 @@ async function main() {
     assert(/not found/i.test(stderr), 'stderr mentions the missing file');
   }
 
+  // Album: second photo outside the repository
+  {
+    const inside = join(REPO_ROOT, 'no-such-photo-a.jpg');
+    const { code, stderr } = await run([
+      '--photo',
+      inside,
+      '--photo',
+      '/tmp/outside-repo-smoke.jpg',
+    ]);
+    assert(code !== 0, 'album with photo outside repo exits non-zero');
+    assert(
+      /inside the repository root|not found/i.test(stderr),
+      `stderr mentions path validation (got: ${stderr.trim().slice(0, 120)})`,
+    );
+  }
+
   // Local validation: text over the Telegram limit
   {
     const { code, stderr } = await run(['--text-file', '-'], { stdin: 'x'.repeat(4097) });

@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * Post a message or a photo to the project Telegram channel via Bot API.
- * HTML parse_mode. Zero npm dependencies — Node 18+ fetch / FormData / Blob.
+ * Post a message, a photo, or a photo album to the project Telegram channel
+ * via Bot API. HTML parse_mode. Zero npm dependencies — Node 18+ fetch /
+ * FormData / Blob.
  *
  * Config: process.env first (Cloud Agent secrets), then repo .env (local).
  *   TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, TELEGRAM_CHANNEL_USERNAME
@@ -10,6 +11,7 @@
  *   send.mjs --text "Короткий текст"
  *   send.mjs --text-file draft.html
  *   send.mjs --photo <abs-path> --caption-file caption.html
+ *   send.mjs --photo a.jpg --photo b.jpg --caption-file -
  *   cat caption.html | send.mjs --photo <abs-path> --caption-file -
  */
 
@@ -23,6 +25,7 @@ const REPO_ROOT = resolve(__dirname, '../../../..');
 
 const TEXT_MAX = 4096;
 const CAPTION_MAX = 1024;
+const ALBUM_MAX = 10;
 
 // ─── .env ───────────────────────────────────────────────────────────────────
 
@@ -92,10 +95,12 @@ async function telegramApi(token, method, body, isForm = false) {
 }
 
 function successResult(result, channelUsername) {
-  const messageId = result.message_id;
+  // sendMediaGroup returns an array of messages; take the first for the link
+  const first = Array.isArray(result) ? result[0] : result;
+  const messageId = first?.message_id;
   return {
     message_id: messageId,
-    chat_id: result.chat?.id ?? null,
+    chat_id: first?.chat?.id ?? null,
     link: channelUsername && messageId != null ? `https://t.me/${channelUsername}/${messageId}` : null,
   };
 }
@@ -132,6 +137,16 @@ function readTextSource(pathOrDash, label) {
   return readFileSync(abs, 'utf8');
 }
 
+function resolveLocalPhoto(photo) {
+  const isUrl = /^https?:\/\//i.test(photo);
+  const looksLocal = !isUrl && (photo.includes('/') || photo.includes('\\'));
+  if (!looksLocal) return { kind: 'remote', value: photo };
+  const abs = resolve(photo);
+  assertPathInsideRepo(abs);
+  if (!existsSync(abs)) throw new Error(`Photo file not found: ${abs}`);
+  return { kind: 'local', abs };
+}
+
 // ─── Send ───────────────────────────────────────────────────────────────────
 
 async function sendMessage({ text, chatId, preview, silent }) {
@@ -157,28 +172,75 @@ async function sendPhoto({ photo, caption, chatId, silent }) {
     throw new Error(`caption exceeds Telegram limit (${caption.length} > ${CAPTION_MAX})`);
   }
   const target = chatId || defaultChatId;
+  const resolved = resolveLocalPhoto(photo);
 
-  const isUrl = /^https?:\/\//i.test(photo);
-  const looksLocal = !isUrl && (photo.includes('/') || photo.includes('\\'));
-
-  if (looksLocal) {
-    const abs = resolve(photo);
-    assertPathInsideRepo(abs);
-    if (!existsSync(abs)) throw new Error(`Photo file not found: ${abs}`);
-    const bytes = await readFile(abs);
+  if (resolved.kind === 'local') {
+    const bytes = await readFile(resolved.abs);
     const form = new FormData();
     form.append('chat_id', String(target));
-    form.append('photo', new Blob([bytes], { type: mimeFromPath(abs) }), basename(abs));
+    form.append('photo', new Blob([bytes], { type: mimeFromPath(resolved.abs) }), basename(resolved.abs));
     form.append('parse_mode', 'HTML');
     if (caption) form.append('caption', caption);
     if (silent) form.append('disable_notification', 'true');
     return successResult(await telegramApi(token, 'sendPhoto', form, true), channelUsername);
   }
 
-  const body = { chat_id: target, photo, parse_mode: 'HTML' };
+  const body = { chat_id: target, photo: resolved.value, parse_mode: 'HTML' };
   if (caption) body.caption = caption;
   if (silent) body.disable_notification = true;
   return successResult(await telegramApi(token, 'sendPhoto', body), channelUsername);
+}
+
+async function sendMediaGroup({ photos, caption, chatId, silent }) {
+  const { token, chatId: defaultChatId, channelUsername } = requireConfig();
+  if (!photos?.length) throw new Error('At least one photo is required');
+  if (photos.length > ALBUM_MAX) {
+    throw new Error(`album exceeds Telegram limit (${photos.length} > ${ALBUM_MAX})`);
+  }
+  if (caption && caption.length > CAPTION_MAX) {
+    throw new Error(`caption exceeds Telegram limit (${caption.length} > ${CAPTION_MAX})`);
+  }
+
+  const target = chatId || defaultChatId;
+  const resolved = photos.map((p) => resolveLocalPhoto(p));
+  const allLocal = resolved.every((r) => r.kind === 'local');
+  const allRemote = resolved.every((r) => r.kind === 'remote');
+  if (!allLocal && !allRemote) {
+    throw new Error('Album photos must be either all local files or all URLs/file_ids');
+  }
+
+  if (allLocal) {
+    const form = new FormData();
+    form.append('chat_id', String(target));
+    const media = [];
+    for (let i = 0; i < resolved.length; i += 1) {
+      const abs = resolved[i].abs;
+      const attachName = `file${i}`;
+      const bytes = await readFile(abs);
+      form.append(attachName, new Blob([bytes], { type: mimeFromPath(abs) }), basename(abs));
+      const item = { type: 'photo', media: `attach://${attachName}` };
+      if (i === 0 && caption) {
+        item.caption = caption;
+        item.parse_mode = 'HTML';
+      }
+      media.push(item);
+    }
+    form.append('media', JSON.stringify(media));
+    if (silent) form.append('disable_notification', 'true');
+    return successResult(await telegramApi(token, 'sendMediaGroup', form, true), channelUsername);
+  }
+
+  const media = resolved.map((r, i) => {
+    const item = { type: 'photo', media: r.value };
+    if (i === 0 && caption) {
+      item.caption = caption;
+      item.parse_mode = 'HTML';
+    }
+    return item;
+  });
+  const body = { chat_id: target, media };
+  if (silent) body.disable_notification = true;
+  return successResult(await telegramApi(token, 'sendMediaGroup', body), channelUsername);
 }
 
 // ─── CLI ────────────────────────────────────────────────────────────────────
@@ -187,6 +249,7 @@ const USAGE = `Usage:
   send.mjs --text "Текст"                       Post an HTML message
   send.mjs --text-file <path|->                 Same, text from file or stdin
   send.mjs --photo <path|url|file_id> [--caption "…" | --caption-file <path|->]
+  send.mjs --photo a.jpg --photo b.jpg …        Album (caption on first photo)
 
 Options:
   --chat-id <id>   Override TELEGRAM_CHAT_ID
@@ -195,7 +258,7 @@ Options:
 `;
 
 function parseArgs(argv) {
-  const opts = { preview: false, silent: false };
+  const opts = { preview: false, silent: false, photos: [] };
   const takesValue = new Set([
     '--text',
     '--text-file',
@@ -221,7 +284,11 @@ function parseArgs(argv) {
     if (!takesValue.has(arg)) throw new Error(`Unknown option: ${arg}`);
     const value = argv[i + 1];
     if (value === undefined) throw new Error(`Option ${arg} requires a value`);
-    opts[arg.slice(2).replace(/-([a-z])/g, (_m, c) => c.toUpperCase())] = value;
+    if (arg === '--photo') {
+      opts.photos.push(value);
+    } else {
+      opts[arg.slice(2).replace(/-([a-z])/g, (_m, c) => c.toUpperCase())] = value;
+    }
     i += 1;
   }
   return opts;
@@ -236,16 +303,26 @@ async function main() {
   }
 
   let result;
-  if (opts.photo) {
+  if (opts.photos.length > 0) {
     const caption = opts.captionFile
       ? readTextSource(opts.captionFile, 'Caption')
       : opts.caption;
-    result = await sendPhoto({
-      photo: opts.photo,
-      caption: caption ? caption.trimEnd() : undefined,
-      chatId: opts.chatId,
-      silent: opts.silent,
-    });
+    const trimmed = caption ? caption.trimEnd() : undefined;
+    if (opts.photos.length === 1) {
+      result = await sendPhoto({
+        photo: opts.photos[0],
+        caption: trimmed,
+        chatId: opts.chatId,
+        silent: opts.silent,
+      });
+    } else {
+      result = await sendMediaGroup({
+        photos: opts.photos,
+        caption: trimmed,
+        chatId: opts.chatId,
+        silent: opts.silent,
+      });
+    }
   } else if (opts.text || opts.textFile) {
     const text = opts.textFile ? readTextSource(opts.textFile, 'Text') : opts.text;
     result = await sendMessage({

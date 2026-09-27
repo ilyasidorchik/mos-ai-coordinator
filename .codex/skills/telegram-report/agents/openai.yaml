@@ -1,0 +1,4 @@
+interface:
+  display_name: "Telegram report"
+  short_description: "Compose response report and post to Telegram"
+  default_prompt: "Use $telegram-report to compose a response report (photos, human caption, GitHub footer) and publish it to the Telegram channel."

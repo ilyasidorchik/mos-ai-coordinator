@@ -20,7 +20,8 @@ Process official response PDFs dropped into [`inbox/`](../../../inbox/):
 4. If the response mentions attached photos — run [`extract-response-photos`](../extract-response-photos/SKILL.md).
 5. Update [`statistics.md`](../../../statistics.md).
 6. Save without waiting for the user: one case → `git add .` + [`/save`](../save/SKILL.md); several cases → [`/save-selected`](../save-selected/SKILL.md) per case with an explicit path list.
-7. Report.
+7. Report (statistics → saved responses → Telegram offer).
+8. If the user agrees to the Telegram offer — run [`telegram-report`](../telegram-report/SKILL.md) for the successfully saved cases.
 
 Do not duplicate transcription or photo-crop logic here — always delegate step 3 to `pdf-to-text` and step 4 to `extract-response-photos`.
 
@@ -212,36 +213,9 @@ Do **not** wrap the user-facing report in a fenced `text` / code block — Markd
 
 Do **not** use the old technical lines (`inbox/foo.pdf → … (score …)`, `response.md: создан`).
 
-Structure:
+Structure (this order):
 
-1. Plain line (not a markdown heading): `Сохранённые ответы:` followed by bullets.
-2. One bullet per successfully processed PDF (moved to a case):
-
-```markdown
-Сохранённые ответы:
-
-- [16-я Парковая, 35](VAO/bike-friendly-drain-grates/16-th-parkovaya-35/response/response.md) — Мосводосток заменил решётку
-```
-
-Rules for each bullet:
-
-- Link text = location/object only (before the dash). After the link: ` — essence` of the agency reply (same style as measure bullets in `statistics.md`).
-- Href = repo-relative path to that case’s `response/response.md`.
-- Write the summary from the response already read (after `pdf-to-text`); do not invent.
-- No long quotes; no score in the normal case.
-- Low-confidence match: after the bullet, a short note + 2–3 alternatives.
-- If `response.md` was skipped (already existed): `[location](path) — essence — пропущен` (or `[location](path) — пропущен` if there is no text).
-- If photos were extracted in step 8: append to the same bullet `, [фото](<repo-relative path to the saved JPEG>)`. Example:
-
-```markdown
-- [16-я Парковая, 18](VAO/bike-friendly-drain-grates/16-th-parkovaya-18/response/response.md) — Мосводосток заменил решётку, [фото](VAO/bike-friendly-drain-grates/16-th-parkovaya-18/response/photos/16-th-parkovaya-18-result.jpg)
-```
-
-- Href of `[фото]` — the concrete file from step 8 (e.g. `{case}-result.jpg`), not the folder. Several photos: `, [фото](…/result1.jpg), [фото 2](…/result2.jpg)`.
-- If photo extraction was triggered but found nothing / failed deps: one short note, do not invent files or a `[фото]` link.
-- Unmatched PDF left in `inbox/`: explain separately; do not invent a case path.
-
-3. If `statistics.md` was updated in this run:
+1. If `statistics.md` was updated in this run:
 
 ```markdown
 [Статистика](statistics.md) обновлена:
@@ -254,7 +228,50 @@ Rules for each bullet:
 - Do **not** repeat measure bullets in the report (they live in `statistics.md`).
 - If statistics were not updated — omit this block.
 
-4. Do **not** print an Apply / «нажмите Apply» footer — saving is done in §11 before or as part of finishing the run. Rely on the short `/save` or `/save-selected` report for commit/push confirmation; do not duplicate a long save narrative in the inbox report.
+2. Plain line (not a markdown heading): `Сохранённый ответ:` or `Сохранённые ответы:` followed by bullets.
+   - **One** successfully saved response — `Сохранённый ответ:`
+   - **Two or more** — `Сохранённые ответы:`
+3. One bullet per successfully processed PDF (moved to a case):
+
+```markdown
+Сохранённый ответ:
+
+- [PDF](<VAO/bike-friendly-drain-grates/16-th-parkovaya-35/response/17-65-6736∕26_14.04.2026_Сообщение с mos.ru, идентификатор： 57492186 ….pdf>), [16-я Парковая, 35](VAO/bike-friendly-drain-grates/16-th-parkovaya-35/response/response.md) — Мосводосток заменил решётку
+```
+
+Rules for each bullet:
+
+- Start with `[PDF](<path>)`, then `, `, then the location link and essence.
+- **Always** wrap the `[PDF]` destination in literal angle brackets: `[PDF](<…/file.pdf>)`. Mos.ru export basenames contain spaces (and often `∕`, fullwidth `：`, NBSP); without `<…>` Markdown stops the URL at the first space and the chat shows raw `[PDF](…)`. Do not emit bare `[PDF](path with spaces)`.
+- `[PDF]` href = the concrete PDF file just moved into `<case>/response/` (basename after `mv`, including any §6 truncation).
+- Link text for the second link = location/object only (before the dash). After that link: ` — essence` of the agency reply (same style as measure bullets in `statistics.md`).
+- Href of the location link = repo-relative path to that case’s `response/response.md` (no spaces → bare `(…)` is fine).
+- Write the summary from the response already read (after `pdf-to-text`); do not invent.
+- No long quotes; no score in the normal case.
+- Low-confidence match: after the bullet, a short note + 2–3 alternatives.
+- If `response.md` was skipped (already existed): `[PDF](<…pdf>), [location](path) — essence — пропущен` (or `[PDF](<…pdf>), [location](path) — пропущен` if there is no text).
+- If photos were extracted in step 8: append to the same bullet `, [фото](<path-to.jpg>)` — also wrap in `<…>` if the path has spaces. Example:
+
+```markdown
+- [PDF](<VAO/bike-friendly-drain-grates/16-th-parkovaya-18/response/17-65-….pdf>), [16-я Парковая, 18](VAO/bike-friendly-drain-grates/16-th-parkovaya-18/response/response.md) — Мосводосток заменил решётку, [фото](VAO/bike-friendly-drain-grates/16-th-parkovaya-18/response/photos/16-th-parkovaya-18-result.jpg)
+```
+
+- Href of `[фото]` — the concrete file from step 8 (e.g. `{case}-result.jpg`), not the folder. Several photos: `, [фото](…/result1.jpg), [фото 2](…/result2.jpg)` (or `<…>` form when needed).
+- If photo extraction was triggered but found nothing / failed deps: one short note, do not invent files or a `[фото]` link.
+- Unmatched PDF left in `inbox/`: explain separately; do not invent a case path.
+
+4. If there was **at least one** successfully saved response in this run — end with **exactly** this line (NBSP after «в» and «ваш»):
+
+```markdown
+Отправлю в ваш Телеграм-канал?
+```
+
+- Do **not** list cases again; do **not** mention `/telegram-report` to the user.
+- Do **not** publish yet — wait for agreement («да», «отправь», «в тг», …).
+- On agreement: read and execute [`telegram-report`](../telegram-report/SKILL.md) for each successfully processed case from the «Сохранённые ответы» list (processing order). If the user names one case — only that case.
+- If there were no successfully saved responses — omit this question.
+
+5. Do **not** print an Apply / «нажмите Apply» footer — saving is done in §11 before or as part of finishing the run. Rely on the short `/save` or `/save-selected` report for commit/push confirmation; do not duplicate a long save narrative in the inbox report.
 
 Pure `/inbox` (no mail) does **not** print a Gmail / Mos-ru intro — only the blocks above.
 
@@ -295,6 +312,7 @@ Limits:
 - Do not change **Обращений подано** from `/inbox`.
 - Do not invent photo files; only save what `extract-response-photos` actually writes.
 - Commit and push only via `/save` (single case) or `/save-selected` (several cases); do not rely on an Apply / `afterFileEdit` hook.
+- Do not post to Telegram from `/inbox` without the user’s explicit agreement after the «Отправлю в ваш Телеграм-канал?» offer; on agreement delegate to [`telegram-report`](../telegram-report/SKILL.md).
 
 ## Expected User Phrases
 
