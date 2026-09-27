@@ -17,6 +17,7 @@
 — 2025 (панорама Яндекса) — polyarnaya-jam_2025-yandex-panorama.jpg;
 — 16.09.2026, 15:06 — polyarnaya-jam_2026-09-16_15-06.jpg;
 — 16.09.2026, 15:06 — polyarnaya-jam_2026-09-16_15-06_2.jpg;
+— 17.09.2026, 14:46 — polyarnaya-jam_2026-09-17_14-46.jpeg;
 — 20.09.2026, 13:44 — polyarnaya-jam_2026-09-20_13-44.jpeg;
 — 20.09.2026, 15:40 — polyarnaya-jam_2026-09-20_15-40.jpg.
 
