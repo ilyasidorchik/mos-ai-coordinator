@@ -66,6 +66,8 @@ Download **only** `application/pdf` attachments. Skip ZIP «Документ с 
 
 Also skip a PDF whose filename is exactly `Направлен.pdf` (case-sensitive basename). In SEDO forwards this is usually a second attachment — a duplicate scan of the same letter already inside the mos.ru export PDF.
 
+Attachment basenames longer than **255 UTF-8 bytes** (ext4 limit) are truncated from the end of the stem; `.pdf` is kept.
+
 ## Workflow
 
 ### 0. Opening status
@@ -159,6 +161,7 @@ Do not add a separate technical «Inbox:» heading.
 
 - Only process SEDO response emails as defined in Scope (script enforces this).
 - Only download PDF attachments.
+- Truncate attachment basenames to ≤ 255 UTF-8 bytes (ext4) when saving into `inbox/`.
 - Do not download `Направлен.pdf` — it duplicates the letter already in the mos.ru export.
 - Do not mention routine skipped attachments (`Направлен.pdf`, «Документ с ЭП.zip`, non-PDF parts) in the user report.
 - Do not use the browser as a Gmail substitute when the script fails; do not ask for a password.

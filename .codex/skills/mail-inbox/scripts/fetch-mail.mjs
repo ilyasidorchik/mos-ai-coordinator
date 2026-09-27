@@ -25,6 +25,8 @@ const DEFAULT_QUERY =
   'in:inbox ("на обращение гражданина") (from:sedo@mos.ru OR subject:Fwd OR subject:FW OR "sedo@mos.ru")';
 const DEFAULT_LABEL = 'Mos Responses. Processed';
 const SKIP_BASENAME = 'Направлен.pdf';
+/** ext4 single-filename limit (bytes); keeps clones working on Linux. */
+const MAX_BASENAME_BYTES = 255;
 const FWD_RE = /^(Fwd|FW|Fw|Пересл|Пересылка):/i;
 const GMAIL_API = 'https://gmail.googleapis.com/gmail/v1/users/me';
 
@@ -169,6 +171,16 @@ function walkParts(part, out = []) {
   return out;
 }
 
+function truncateUtf8Bytes(str, maxBytes) {
+  const buf = Buffer.from(str, 'utf8');
+  if (buf.length <= maxBytes) return str;
+  let end = maxBytes;
+  // If the first excluded byte is a continuation, the cut split a character —
+  // walk back so that incomplete character is fully dropped.
+  while (end > 0 && (buf[end] & 0xc0) === 0x80) end -= 1;
+  return buf.subarray(0, end).toString('utf8');
+}
+
 function safeBasename(name) {
   const base = basename(name || '');
   if (!base || base === '.' || base === '..' || base.includes('/') || base.includes('\\')) {
@@ -177,7 +189,16 @@ function safeBasename(name) {
   if (base.includes('..')) {
     throw new Error(`Unsafe attachment filename: ${JSON.stringify(name)}`);
   }
-  return base;
+  const encoded = Buffer.from(base, 'utf8');
+  if (encoded.length <= MAX_BASENAME_BYTES) return base;
+  const dot = base.lastIndexOf('.');
+  const ext = dot > 0 ? base.slice(dot) : '';
+  const stem = dot > 0 ? base.slice(0, dot) : base;
+  const budget = MAX_BASENAME_BYTES - Buffer.byteLength(ext, 'utf8');
+  if (budget < 1) {
+    throw new Error(`Unsafe attachment filename (extension too long): ${JSON.stringify(name)}`);
+  }
+  return truncateUtf8Bytes(stem, budget) + ext;
 }
 
 function isPdfPart(part) {
