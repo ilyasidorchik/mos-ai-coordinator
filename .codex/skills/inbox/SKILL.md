@@ -228,11 +228,13 @@ Structure (this order):
 - Do **not** repeat measure bullets in the report (they live in `statistics.md`).
 - If statistics were not updated — omit this block.
 
-2. Plain line (not a markdown heading): `Сохранённые ответы:` followed by bullets.
+2. Plain line (not a markdown heading): `Сохранённый ответ:` or `Сохранённые ответы:` followed by bullets.
+   - **One** successfully saved response — `Сохранённый ответ:`
+   - **Two or more** — `Сохранённые ответы:`
 3. One bullet per successfully processed PDF (moved to a case):
 
 ```markdown
-Сохранённые ответы:
+Сохранённый ответ:
 
 - [16-я Парковая, 35](VAO/bike-friendly-drain-grates/16-th-parkovaya-35/response/response.md) — Мосводосток заменил решётку
 ```
