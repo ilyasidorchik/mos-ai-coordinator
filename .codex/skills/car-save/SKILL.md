@@ -1,9 +1,9 @@
 ---
-name: save-car
+name: car-save
 description: >-
   Masks vehicle identity (date/time, make, plate) in a MADI / no-stopping
   appeal, deletes request photos for GitHub safety, then runs /save. Use when
-  the user mentions /save-car, «сохрани машину», «замаскируй и сохрани», or
+  the user mentions /car-save, «сохрани машину», «замаскируй и сохрани», or
   asks to redact a car-stop case before publishing.
 disable-model-invocation: true
 ---
@@ -77,7 +77,7 @@ If the folder is missing or has no images — note that and continue.
 1. Read [`.codex/skills/save/SKILL.md`](../save/SKILL.md).
 2. Follow it completely (inspect → commit all relevant changes → push → report).
 
-`/save-car` only prepares the case; `/save` owns git.
+`/car-save` only prepares the case; `/save` owns git.
 
 ### 5. Report
 
@@ -89,7 +89,7 @@ Briefly, in order:
 
 ## Expected user phrases
 
-- `/save-car`
+- `/car-save`
 - `Сохрани машину`
 - `Замаскируй и сохрани`
 - `@case/request/request.md` with a mask-and-save request for a car-stop appeal
