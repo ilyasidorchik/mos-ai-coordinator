@@ -151,7 +151,7 @@ User-facing report — Markdown, **not** wrapped in a fenced `text` block. No pe
 Then print the usual `/inbox` report blocks from [`inbox/SKILL.md`](../inbox/SKILL.md) §10 **in that skill’s order**:
 
 1. `[Статистика](statistics.md) обновлена:` when stats changed
-2. Plain line `Сохранённый ответ:` / `Сохранённые ответы:` (singular when one saved response; not a markdown heading) with bullets as in [`inbox`](../inbox/SKILL.md) §10 — `[PDF](<github-blob-url>)` and location/photo hrefs via [`github-link`](../github-link/SKILL.md), then `[локация](blob) — суть`
+2. Plain line `Сохранённый ответ:` / `Сохранённые ответы:` (singular when one saved response; not a markdown heading) with bullets as in [`inbox`](../inbox/SKILL.md) §10 — repo-relative `[PDF](<…/file.pdf>)`, `[локация](…/response.md)`, optional `[фото](…)` (open in Cursor editor / mobile, not GitHub)
 3. Telegram offer `Отправлю в ваш Телеграм-канал?` when there was at least one successfully saved response (agreement → `/telegram-report` per inbox §10)
 
 (Saving already ran inside `/inbox` §11 — no Apply footer.)
