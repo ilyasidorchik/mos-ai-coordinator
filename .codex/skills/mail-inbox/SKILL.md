@@ -2,9 +2,10 @@
 name: mail-inbox
 description: >-
   Fetches agency response emails from Gmail via local fetch-mail.mjs (sedo@mos.ru
-  originals and forwards), downloads PDF attachments into inbox/, marks messages
-  processed, then runs the inbox skill. Use when the user mentions /mail-inbox,
-  «Разбери почту», «Process the mail», or «Забери ответы из Gmail».
+  and ЦППК / central-ppk.ru originals and forwards), downloads PDF attachments
+  (or ЦППК body text as .md) into inbox/, marks messages processed, then runs the
+  inbox skill. Use when the user mentions /mail-inbox, «Разбери почту»,
+  «Process the mail», or «Забери ответы из Gmail».
 disable-model-invocation: true
 ---
 
@@ -15,12 +16,14 @@ disable-model-invocation: true
 Pull official response emails from Gmail into [`inbox/`](../../../inbox/), then
 delegate routing, transcription, and photo extraction to [`inbox`](../inbox/SKILL.md):
 
-1. Find SEDO response emails (originals and forwards) via
+1. Find SEDO and ЦППК response emails (originals and forwards) via
    [`scripts/fetch-mail.mjs`](scripts/fetch-mail.mjs).
-2. Download each PDF into `inbox/`.
-3. Mark the message read and move it to Gmail label `Mos Responses. Processed`.
+2. Download each PDF into `inbox/` (for ЦППК without PDF — save the body as `.md`).
+3. Mark the message read and move it to Gmail label `Mos Responses. Processed`
+   (only when something was saved).
 4. Run the [`inbox`](../inbox/SKILL.md) skill on whatever was downloaded
-   (match → move → pdf-to-text → extract attached photos when mentioned →
+   (match → move → pdf-to-text for PDFs / place `.md` as `response.md` or
+   `response-cppk.md` → extract attached photos when mentioned →
    statistics → save → report).
 
 Do not duplicate inbox matching, `pdf-to-text`, or `extract-response-photos` — always delegate step 4.
@@ -59,10 +62,21 @@ Do **not** open Gmail in the browser as a substitute, and do not ask for a passw
 
 Only citizen-appeal **response** emails (enforced inside the script):
 
-- **Original:** `from` contains `sedo@mos.ru`, subject like «Ответ … на обращение гражданина».
-- **Forward:** `from` is not SEDO, but subject matches `/^(Fwd|FW|Fw|Пересл|Пересылка):/i` and/or snippet mentions `sedo@mos.ru`, with the same subject pattern.
+### SEDO (Мос-ру)
 
-Download **only** `application/pdf` attachments. Skip ZIP «Документ с ЭП», `message/rfc822`, and other parts.
+- **Original:** `from` contains `sedo@mos.ru`, subject like «Ответ … на обращение гражданина».
+- **Forward:** subject matches `/^(Fwd|FW|Fw|Пересл|Пересылка):/i` and/or snippet mentions `sedo@mos.ru`, with the same subject pattern.
+
+### ЦППК
+
+- **Original:** `from` contains `@central-ppk.ru` (usually `eco@central-ppk.ru`).
+- **Forward:** subject matches the Fwd regex above and/or snippet mentions `central-ppk.ru`, with subject/snippet «Предоставлен ответ по обращению» (optional appeal number).
+
+Download **only** `application/pdf` attachments from both sources. Skip ZIP «Документ с ЭП», `message/rfc822`, and other parts.
+
+For **ЦППК without a PDF** — the script saves the email body as
+`inbox/ЦППК_обращение_<id>.md` (or `ЦППК_<messageId>.md`) with a short YAML frontmatter
+(`source`, `subject`, `from`, `date`, `cppk_appeal_id`).
 
 Also skip a PDF whose filename is exactly `Направлен.pdf` (case-sensitive basename). In SEDO forwards this is usually a second attachment — a duplicate scan of the same letter already inside the mos.ru export PDF.
 
@@ -75,7 +89,7 @@ Attachment basenames longer than **255 UTF-8 bytes** (ext4 limit) are truncated 
 Before tool calls, tell the user in one short line (exact wording):
 
 ```text
-Забираю ответы из Gmail по skill `/mail-inbox`: запускаю скрипт и ищу письма от Мос-ру
+Забираю ответы из Gmail по skill `/mail-inbox`: запускаю скрипт и ищу письма от Мос-ру и ЦППК
 ```
 
 ### 1. Run the script
@@ -91,53 +105,65 @@ Parse the JSON on stdout:
 
 | Field | Meaning |
 | --- | --- |
-| `accepted` | SEDO emails (original / forward) the script classified |
-| `downloaded` | PDF files written under `inbox/` (`file`, `bytes`) |
-| `skipped` | exists / not_sedo / unsafe_name — do not dump in the user report |
+| `accepted` | SEDO / ЦППК emails (original / forward); each has `source: "sedo" \| "cppk"` |
+| `downloaded` | files written under `inbox/` (`file`, `bytes`, `kind: "pdf" \| "body_md"`) |
+| `skipped` | exists / not_response / unsafe_name / empty_body — do not dump in the user report |
 | `label` | `{ name, id, created }` — `created: true` → mention «лейбл создан» only if useful |
 | `errors` | per-message failures — continue; note in report only if something failed |
 | `dryRun` | should be `false` for the real run |
 
 - If the process exits non-zero and stdout has no useful `downloaded` — stop; explain the stderr hint (missing env / `invalid_grant` → `auth.mjs`); do **not** run `/inbox`.
-- If `accepted.length === 0` and no downloads — empty-inbox report (§5), do **not** run `/inbox`.
+- If `accepted.length === 0` and no downloads — empty-inbox report (§3), do **not** run `/inbox`.
 - `N` for the user intro = `accepted.length`.
 
 Do not call Gmail MCP. Do not re-implement search / download / label logic outside the script.
 
 ### 2. Delegate to inbox
 
-If at least one new PDF landed in `inbox/` (`downloaded.length ≥ 1`):
+If at least one new file landed in `inbox/` (`downloaded.length ≥ 1` — PDF **or** `.md`):
 
 1. Read [`inbox/SKILL.md`](../inbox/SKILL.md).
-2. Execute its full workflow (match → move → pdf-to-text → extract photos if attached → update statistics → save via `/save` or `/save-selected` → report).
+2. Execute its full workflow (match → move → pdf-to-text for PDFs / place body `.md` without pdf-to-text → extract photos if attached → update statistics → save via `/save` or `/save-selected` → report).
 
 Saving (commit + push) is done by the delegated [`inbox`](../inbox/SKILL.md) skill — do not wait for Apply and do not run a separate commit from `mail-inbox`.
 
-If no PDF was downloaded — do not run `/inbox`.
+If nothing was downloaded — do not run `/inbox`.
 
 ### 3. Report
 
 User-facing report — Markdown, **not** wrapped in a fenced `text` block. No per-email `Gmail <id>` dump as the main tone (record script/label errors only if something failed).
 
-**Intro** (counts by fact; typography per `typograf`):
+**Intro** — attribute the sender by `accepted[].source`:
+
+- only `sedo` → «от Мос-ру»
+- only `cppk` → «от ЦППК»
+- both → «от Мос-ру и ЦППК»
+
+Write **«Мос-ру» through a hyphen**, never «Мос.ру».
+
+**N = 1** (singular throughout):
 
 ```markdown
-Пришло 1 письмо от Мос-ру с ответом на ваше обращение.
+Пришло 1 письмо от <источник> с ответом на ваше обращение.
 
-Из письма скачан PDF-файл и добавлена текстовая расшифровка. Письмо помечено прочитанным и перемещено из «Входящих» в папку `Mos Responses. Processed`.
+<вторая фраза>. Письмо помечено прочитанным и перемещено из «Входящих» в папку `Mos Responses. Processed`.
 ```
+
+**N ≥ 2**:
 
 ```markdown
-Пришло N писем от Мос-ру с ответами на ваши обращения.
+Пришло N писем от <источник> с ответами на ваши обращения.
 
-Из каждого письма скачан PDF-файл и добавлена текстовая расшифровка. Письма помечены прочитанными и перемещены из «Входящих» в папку `Mos Responses. Processed`.
+<вторая фраза>. Письма помечены прочитанными и перемещены из «Входящих» в папку `Mos Responses. Processed`.
 ```
 
-- `N` = accepted SEDO emails (original or forward).
-- **N = 1** — use the first intro (singular throughout: «1 письмо», «с ответом на ваше обращение», «Из письма…», «Письмо помечено… и перемещено…»).
-- **N ≥ 2** — use the second intro; substitute the actual count for `N`.
-- Write **«Мос-ру» through a hyphen**, never «Мос.ру».
-- If a PDF was not downloaded from every email due to a **failure** (not routine skip) — adjust the second sentence; do not claim «из каждого» / «из письма» when false.
+**Вторая фраза** — по факту `downloaded[].kind`:
+
+- только PDF → «Из письма скачан PDF-файл и добавлена текстовая расшифровка» / «Из каждого письма скачан PDF-файл…»
+- только `body_md` → «Из письма сохранён текст ответа» / «Из каждого письма сохранён текст ответа»
+- смесь PDF и body → опишите по факту (например: «Из писем скачаны PDF и сохранены тексты ответов без вложений»)
+- If a file was not saved from every email due to a **failure** (not routine skip) — adjust; do not claim «из каждого» / «из письма» when false.
+
 - **Do not mention** routine skipped attachments in the report: ZIP «Документ с ЭП», `Направлен.pdf`, `message/rfc822`, or other non-PDF parts.
 - If in this run `/inbox` extracted photo attachments — extend the second sentence, e.g. «…текстовая расшифровка, а также фото из приложений.» Only when at least one photo file was actually saved. Keep singular/plural agreement with N.
 - If `N` = 0 — use this exact text (two paragraphs) and do **not** run `/inbox`:
@@ -151,7 +177,7 @@ User-facing report — Markdown, **not** wrapped in a fenced `text` block. No pe
 Then print the usual `/inbox` report blocks from [`inbox/SKILL.md`](../inbox/SKILL.md) §10 **in that skill’s order**:
 
 1. `[Статистика](statistics.md) обновлена:` when stats changed
-2. Plain line `Сохранённый ответ:` / `Сохранённые ответы:` (singular when one saved response; not a markdown heading) with bullets as in [`inbox`](../inbox/SKILL.md) §10 — repo-relative `[PDF](<…/file.pdf>)`, `[локация](…/response.md)`, optional `[фото](…)` (open in Cursor editor / mobile, not GitHub)
+2. Plain line `Сохранённый ответ:` / `Сохранённые ответы:` (singular when one saved response; not a markdown heading) with bullets as in [`inbox`](../inbox/SKILL.md) §10 — repo-relative `[PDF](<…/file.pdf>)` or `[ответ](…/response.md)` / `[ответ](…/response-cppk.md)` for body dumps, `[локация](…/response.md)`, optional `[фото](…)` (open in Cursor editor / mobile, not GitHub)
 3. Telegram offer `Отправлю в ваш Телеграм-канал?` when there was at least one successfully saved response (agreement → `/telegram-report` per inbox §10)
 
 (Saving already ran inside `/inbox` §11 — no Apply footer.)
@@ -160,8 +186,8 @@ Do not add a separate technical «Inbox:» heading.
 
 ## Safety Rules
 
-- Only process SEDO response emails as defined in Scope (script enforces this).
-- Only download PDF attachments.
+- Only process SEDO and ЦППК response emails as defined in Scope (script enforces this).
+- Only download PDF attachments (plus ЦППК body `.md` when there is no PDF).
 - Truncate attachment basenames to ≤ 255 UTF-8 bytes (ext4) when saving into `inbox/`.
 - Do not download `Направлен.pdf` — it duplicates the letter already in the mos.ru export.
 - Do not mention routine skipped attachments (`Направлен.pdf`, «Документ с ЭП.zip`, non-PDF parts) in the user report.

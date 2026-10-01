@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Fetch SEDO response PDFs from Gmail into inbox/, mark read, move to label.
+ * Fetch SEDO and ЦППК response PDFs (and ЦППК body-only text) from Gmail into
+ * inbox/, mark read, move to label.
  * Zero npm dependencies — Node 18+ fetch.
  *
  * Config: process.env first (Cloud Agent secrets), then repo .env (local).
@@ -22,12 +23,18 @@ const REPO_ROOT = resolve(__dirname, '../../../..');
 const INBOX_DIR = join(REPO_ROOT, 'inbox');
 
 const DEFAULT_QUERY =
-  'in:inbox ("на обращение гражданина") (from:sedo@mos.ru OR subject:Fwd OR subject:FW OR "sedo@mos.ru")';
+  'in:inbox ((' +
+  '"на обращение гражданина" (from:sedo@mos.ru OR subject:Fwd OR subject:FW OR "sedo@mos.ru")' +
+  ') OR (' +
+  '"Предоставлен ответ по обращению" (from:central-ppk.ru OR subject:Fwd OR subject:FW OR subject:Пересл OR "central-ppk.ru" OR "eco@central-ppk.ru")' +
+  '))';
 const DEFAULT_LABEL = 'Mos Responses. Processed';
 const SKIP_BASENAME = 'Направлен.pdf';
 /** ext4 single-filename limit (bytes); keeps clones working on Linux. */
 const MAX_BASENAME_BYTES = 255;
 const FWD_RE = /^(Fwd|FW|Fw|Пересл|Пересылка):/i;
+const CPPK_SUBJECT_RE = /Предоставлен ответ по обращению/i;
+const CPPK_APPEAL_RE = /Предоставлен ответ по обращению\s+(\d+)/i;
 const GMAIL_API = 'https://gmail.googleapis.com/gmail/v1/users/me';
 
 // ─── .env ───────────────────────────────────────────────────────────────────
@@ -151,9 +158,37 @@ function headerValue(headers, name) {
   return h?.value || '';
 }
 
+/**
+ * @returns {{ source: 'sedo'|'cppk', kind: 'original'|'forward' } | null}
+ */
 function classifyMessage({ from, subject, snippet }) {
-  if (/sedo@mos\.ru/i.test(from)) return 'original';
-  if (FWD_RE.test(subject) || /sedo@mos\.ru/i.test(snippet || '')) return 'forward';
+  const snip = snippet || '';
+
+  if (/sedo@mos\.ru/i.test(from)) {
+    return { source: 'sedo', kind: 'original' };
+  }
+  if (/@central-ppk\.ru/i.test(from)) {
+    return { source: 'cppk', kind: 'original' };
+  }
+
+  const isFwd = FWD_RE.test(subject);
+  const sedoHint = /sedo@mos\.ru/i.test(snip) || /на обращение гражданина/i.test(subject);
+  const cppkHint =
+    CPPK_SUBJECT_RE.test(subject) ||
+    CPPK_SUBJECT_RE.test(snip) ||
+    /central-ppk\.ru/i.test(snip) ||
+    /eco@central-ppk\.ru/i.test(snip);
+
+  if (isFwd || sedoHint || cppkHint) {
+    if (cppkHint && !sedoHint) return { source: 'cppk', kind: 'forward' };
+    if (sedoHint && !cppkHint) return { source: 'sedo', kind: 'forward' };
+    // Ambiguous forward: prefer CPPK subject phrase, else SEDO
+    if (CPPK_SUBJECT_RE.test(subject) || CPPK_SUBJECT_RE.test(snip)) {
+      return { source: 'cppk', kind: 'forward' };
+    }
+    if (sedoHint || isFwd) return { source: 'sedo', kind: 'forward' };
+  }
+
   return null;
 }
 
@@ -169,6 +204,60 @@ function walkParts(part, out = []) {
   }
   for (const child of part.parts || []) walkParts(child, out);
   return out;
+}
+
+function decodeBodyData(data) {
+  if (!data) return '';
+  return Buffer.from(data, 'base64url').toString('utf8');
+}
+
+function stripHtml(html) {
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<\/tr>/gi, '\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+/**
+ * Prefer text/plain; fall back to stripped text/html. Walks nested parts.
+ */
+function extractBodyText(part) {
+  if (!part) return { plain: '', html: '' };
+  let plain = '';
+  let html = '';
+
+  function visit(p) {
+    if (!p) return;
+    const mime = (p.mimeType || '').toLowerCase();
+    if (mime === 'text/plain' && p.body?.data && !plain) {
+      plain = decodeBodyData(p.body.data);
+    } else if (mime === 'text/html' && p.body?.data && !html) {
+      html = decodeBodyData(p.body.data);
+    }
+    for (const child of p.parts || []) visit(child);
+  }
+
+  visit(part);
+  if (plain.trim()) return plain.trim();
+  if (html.trim()) return stripHtml(html);
+  return '';
+}
+
+function cppkAppealId(subject) {
+  const m = subject.match(CPPK_APPEAL_RE);
+  return m ? m[1] : null;
 }
 
 function truncateUtf8Bytes(str, maxBytes) {
@@ -247,11 +336,25 @@ async function downloadAttachment(accessToken, messageId, attachmentId) {
   return Buffer.from(data.data, 'base64url');
 }
 
+function buildCppkBodyMarkdown({ subject, from, date, appealId, body }) {
+  const lines = [
+    '---',
+    `source: cppk`,
+    `subject: ${JSON.stringify(subject)}`,
+    `from: ${JSON.stringify(from)}`,
+    `date: ${JSON.stringify(date)}`,
+  ];
+  if (appealId) lines.push(`cppk_appeal_id: "${appealId}"`);
+  lines.push('---', '', body.trim(), '');
+  return lines.join('\n');
+}
+
 async function processMessage(accessToken, messageId, { dryRun, inboxDir, label }) {
   const result = {
     id: messageId,
     from: '',
     subject: '',
+    source: null,
     kind: null,
     downloaded: [],
     skipped: [],
@@ -267,16 +370,19 @@ async function processMessage(accessToken, messageId, { dryRun, inboxDir, label 
     const headers = msg.payload?.headers || [];
     result.from = headerValue(headers, 'From');
     result.subject = headerValue(headers, 'Subject');
-    result.kind = classifyMessage({
+    const date = headerValue(headers, 'Date');
+    const classified = classifyMessage({
       from: result.from,
       subject: result.subject,
       snippet: msg.snippet || '',
     });
 
-    if (!result.kind) {
-      result.skipped.push({ reason: 'not_sedo' });
+    if (!classified) {
+      result.skipped.push({ reason: 'not_response' });
       return result;
     }
+    result.source = classified.source;
+    result.kind = classified.kind;
 
     if (dryRun) return result;
 
@@ -312,10 +418,50 @@ async function processMessage(accessToken, messageId, { dryRun, inboxDir, label 
       }
       const bytes = await downloadAttachment(accessToken, messageId, part.attachmentId);
       writeFileSync(dest, bytes);
-      result.downloaded.push({ file: fileName, bytes: bytes.length, messageId });
+      result.downloaded.push({ file: fileName, bytes: bytes.length, messageId, kind: 'pdf' });
     }
 
-    if (label?.id) {
+    // ЦППК body-only: save text when no PDF was written this run
+    // (also when PDF skipped as exists — still have the file; only when zero PDFs found)
+    const hadPdfCandidate = pdfs.length > 0;
+    if (result.source === 'cppk' && !hadPdfCandidate && result.downloaded.length === 0) {
+      const body = extractBodyText(msg.payload);
+      if (!body) {
+        result.skipped.push({ reason: 'empty_body' });
+      } else {
+        const appealId = cppkAppealId(result.subject);
+        const rawName = appealId
+          ? `ЦППК_обращение_${appealId}.md`
+          : `ЦППК_${messageId}.md`;
+        const fileName = safeBasename(rawName);
+        const dest = join(inboxDir, fileName);
+        if (existsSync(dest)) {
+          result.skipped.push({ reason: 'exists', file: fileName });
+        } else {
+          const md = buildCppkBodyMarkdown({
+            subject: result.subject,
+            from: result.from,
+            date,
+            appealId,
+            body,
+          });
+          writeFileSync(dest, md, 'utf8');
+          result.downloaded.push({
+            file: fileName,
+            bytes: Buffer.byteLength(md, 'utf8'),
+            messageId,
+            kind: 'body_md',
+          });
+        }
+      }
+    }
+
+    // Mark processed only when something was saved (or the file already existed in inbox)
+    const savedSomething = result.downloaded.length > 0;
+    const alreadyInInbox =
+      result.downloaded.length === 0 &&
+      result.skipped.some((s) => s.reason === 'exists');
+    if (label?.id && (savedSomething || alreadyInInbox)) {
       await gmailFetch(accessToken, `/messages/${encodeURIComponent(messageId)}/modify`, {
         method: 'POST',
         body: {
@@ -335,11 +481,11 @@ async function processMessage(accessToken, messageId, { dryRun, inboxDir, label 
 // ─── CLI ────────────────────────────────────────────────────────────────────
 
 const USAGE = `Usage:
-  fetch-mail.mjs                         Fetch SEDO PDFs into inbox/, mark processed
+  fetch-mail.mjs                         Fetch SEDO/ЦППК responses into inbox/, mark processed
   fetch-mail.mjs --dry-run               Search + classify only (no download / modify)
 
 Options:
-  --query <q>    Gmail search query (default: SEDO responses in inbox)
+  --query <q>    Gmail search query (default: SEDO + ЦППК responses in inbox)
   --max <n>      Max messages to inspect (default: 50)
   --label <name> Processed label name (default: Mos Responses. Processed)
   -h, --help     Show this help
@@ -400,17 +546,29 @@ async function main() {
       label,
     });
     if (r.error) {
-      errors.push({ id: r.id, from: r.from, subject: r.subject, error: r.error });
+      errors.push({
+        id: r.id,
+        from: r.from,
+        subject: r.subject,
+        source: r.source,
+        error: r.error,
+      });
       continue;
     }
     if (!r.kind) {
-      skipped.push({ id: r.id, from: r.from, subject: r.subject, reason: 'not_sedo' });
+      skipped.push({ id: r.id, from: r.from, subject: r.subject, reason: 'not_response' });
       continue;
     }
-    accepted.push({ id: r.id, from: r.from, subject: r.subject, kind: r.kind });
+    accepted.push({
+      id: r.id,
+      from: r.from,
+      subject: r.subject,
+      source: r.source,
+      kind: r.kind,
+    });
     for (const d of r.downloaded) downloaded.push(d);
     for (const s of r.skipped) {
-      if (s.reason === 'not_sedo') continue;
+      if (s.reason === 'not_response') continue;
       skipped.push({ id: r.id, ...s });
     }
   }

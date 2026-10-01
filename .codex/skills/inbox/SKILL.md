@@ -1,10 +1,11 @@
 ---
 name: inbox
 description: >-
-  Routes response PDFs from inbox/ to the matching case response/ folder by
-  filename, mos.ru id, title, and response vs request content, then runs
-  pdf-to-text. Use when the user mentions @inbox, inbox folder, «Разбери inbox»,
-  «Распредели PDF из inbox», or «Обработай ответы из inbox».
+  Routes response PDFs (and ЦППК body .md dumps) from inbox/ to the matching
+  case response/ folder by filename, mos.ru id, title, and response vs request
+  content, then runs pdf-to-text for PDFs. Use when the user mentions @inbox,
+  inbox folder, «Разбери inbox», «Распредели PDF из inbox», or
+  «Обработай ответы из inbox».
 disable-model-invocation: true
 ---
 
@@ -12,26 +13,28 @@ disable-model-invocation: true
 
 ## Overview
 
-Process official response PDFs dropped into [`inbox/`](../../../inbox/):
+Process official response files dropped into [`inbox/`](../../../inbox/):
 
-1. Match each PDF to the right case.
+1. Match each PDF or ЦППК body `.md` to the right case.
 2. Move it to `<case>/response/`.
-3. Run the [`pdf-to-text`](../pdf-to-text/SKILL.md) workflow for that file.
-4. If the response mentions attached photos — run [`extract-response-photos`](../extract-response-photos/SKILL.md).
+3. For PDFs — run the [`pdf-to-text`](../pdf-to-text/SKILL.md) workflow. For body
+   `.md` — place as `response.md` or `response-cppk.md` (no pdf-to-text).
+4. If the response mentions attached photos — run [`extract-response-photos`](../extract-response-photos/SKILL.md)
+   (PDF only).
 5. Update [`statistics.md`](../../../statistics.md).
 6. Save without waiting for the user: one case → `git add .` + [`/save`](../save/SKILL.md); several cases → [`/save-selected`](../save-selected/SKILL.md) per case with an explicit path list.
 7. Report (statistics → saved responses → Telegram offer).
 8. If the user agrees to the Telegram offer — run [`telegram-report`](../telegram-report/SKILL.md) for the successfully saved cases.
 
-Do not duplicate transcription or photo-crop logic here — always delegate step 3 to `pdf-to-text` and step 4 to `extract-response-photos`.
+Do not duplicate transcription or photo-crop logic here — always delegate PDF step 3 to `pdf-to-text` and step 4 to `extract-response-photos`.
 
 ## Workflow
 
 ### 1. Scan inbox
 
-- Look for `*.pdf` only in `inbox/` at the repo root.
+- Look for `*.pdf` and ЦППК body dumps `ЦППК_*.md` / `ЦППК_обращение_*.md` in `inbox/` at the repo root.
 - If empty — report and stop.
-- If multiple PDFs — process **one by one**, alphabetically; give a summary at the end.
+- If multiple files — process **one by one**, alphabetically (PDFs and `.md` in one list); give a summary at the end.
 
 ### 2. Build case index
 
@@ -46,13 +49,15 @@ Scan the repo for folders with `request/request.md` or `request/request.txt`. Fo
 | `locations` | streets, addresses, districts, metro stations, bus stops/ОРП from title and text |
 | `topics` | subject: «выделенная полоса», «пешеходный переход», «разметка СИМ», «интервал движения», etc. |
 
-Route only into cases that use `response/` (etalon layout). Do not invent a case path for unmatched PDFs.
+Route only into cases that use `response/` (etalon layout). Do not invent a case path for unmatched PDFs or `.md` dumps.
 
 Normalization for comparison: lower-case, `ё→е`, collapse whitespace, strip NBSP, replace `∕` with `/`.
 
-### 3. Extract PDF content
+### 3. Extract file content
 
-For **every** inbox PDF — read text with the Read tool. If text is missing or unreliable, render the first page:
+**ЦППК body `.md`:** read the whole file with the Read tool. Use YAML frontmatter (`cppk_appeal_id`, `subject`) and the body text for matching. Skip PDF rendering and §4 filename-mos.ru parsing for these files.
+
+**PDF:** for **every** inbox PDF — read text with the Read tool. If text is missing or unreliable, render the first page:
 
 ```bash
 mkdir -p /tmp/inbox_pdf_preview
@@ -114,10 +119,13 @@ See [reference.md](reference.md) for real matching examples.
 
 - Always pick the case with the **highest total score** and move there.
 - If score < 50 **or** gap to second place < 15 — flag «низкая уверенность» in the report (short note + 2–3 alternatives after that list item), but still move to the best guess.
-- If score = 0 — leave PDF in `inbox/`, explain why, continue to the next file.
+- If score = 0 — leave the file in `inbox/`, explain why, continue to the next file.
 - Scoring signals (`mos_id`, `заголовок`, локация+тема, …) are for matching only — do **not** put score lines in the normal user report.
+- For ЦППК `.md`, filename has no mos.ru `идентификатор` — rely on body text, locations, topics, and optional `cppk_appeal_id` only as a weak hint (do not invent a case from the id alone).
 
-### 6. Move PDF
+### 6. Move file
+
+#### 6a. PDF
 
 ext4 allows **255 bytes** per filename. Before `mv`, ensure the destination basename fits that limit (UTF-8 **bytes**, not characters). Matching in §4–5 already used the full name in `inbox/` — truncate only for the destination.
 
@@ -156,9 +164,20 @@ Rules:
 - Do not delete the inbox original if the move fails.
 - Do **not** mention truncation in the user-facing report.
 
-### 7. Run pdf-to-text
+#### 6b. ЦППК body `.md`
 
-After a successful move:
+After a successful match:
+
+1. `mkdir -p "<case>/response"`
+2. Destination name:
+   - if `<case>/response/response.md` does **not** exist → write/move as `response.md`;
+   - if `response.md` already exists (typical intermediate Deptrans reply) → `response-cppk.md` (etalon: `ZAO/public-transport/d4-toilet/2026-07-28/response/response-cppk.md`).
+3. Do **not** overwrite an existing `response.md` or `response-cppk.md` without explicit user request — skip and report.
+4. Prefer keeping useful frontmatter + body; strip only if the case already uses a plain letter layout and the user expects that style. Default: keep the dumped content (frontmatter + body).
+
+### 7. Run pdf-to-text (PDF only)
+
+After a successful **PDF** move:
 
 1. Read [`.codex/skills/pdf-to-text/SKILL.md`](../pdf-to-text/SKILL.md).
 2. Execute its workflow for the **just moved** PDF in `<case>/response/`.
@@ -166,9 +185,11 @@ After a successful move:
    - do not silently overwrite existing `response.md`
    - delete `response/_pdf_pages/` after transcription
 
+For ЦППК body `.md` — **skip** this step (text is already in the placed file).
+
 ### 8. Extract attached photos
 
-After `pdf-to-text` (or when `response.md` already existed and was skipped), check whether the answer attaches photos.
+Skip for body `.md` (no PDF pages). For PDFs: after `pdf-to-text` (or when `response.md` already existed and was skipped), check whether the answer attaches photos.
 
 **Trigger** — any of these in `response.md` (preferred) or the PDF text from step 3:
 
@@ -193,11 +214,11 @@ python3 .codex/skills/extract-response-photos/scripts/extract-response-photos.py
 
 ### 9. Update statistics.md
 
-At the end of the run — after all PDFs were processed (move + `pdf-to-text` + optional photo extract) — update [`statistics.md`](../../../statistics.md). Skip this step if no PDF was successfully moved.
+At the end of the run — after all files were processed (move + `pdf-to-text` when applicable + optional photo extract) — update [`statistics.md`](../../../statistics.md). Skip this step if no file was successfully moved.
 
 1. Open `statistics.md`.
-2. **Ответов получено:** add `+1` for each PDF successfully moved to a case in this run. Do **not** count PDFs left in `inbox/` or skipped due to a name conflict in `response/`.
-3. **Меры:** for each successfully moved PDF, read the response text (`response.md` if created or already present; otherwise the PDF text from step 3) and decide whether measures were taken. Count as measures: disciplinary action, driver review/sanctions, inclusion in a works project, concrete follow-up to a balance holder, or other explicit agency actions beyond a refusal / brush-off. Do **not** count pure refusal, «учтем», or «направлено на рассмотрение» with no outcome.
+2. **Ответов получено:** add `+1` for each PDF or ЦППК `.md` successfully moved to a case in this run. Do **not** count files left in `inbox/` or skipped due to a name conflict in `response/`.
+3. **Меры:** for each successfully moved file, read the response text (`response.md` / `response-cppk.md` if created or already present; otherwise the PDF text from step 3) and decide whether measures were taken. Count as measures: disciplinary action, driver review/sanctions, inclusion in a works project, concrete follow-up to a balance holder, or other explicit agency actions beyond a refusal / brush-off. Do **not** count pure refusal, «учтем», or «направлено на рассмотрение» with no outcome.
 4. If measures were found:
    - add `+1` to **Мер принято** (or `+N` if one response clearly contains several independent measures — same style as «Автобус 688 ×2»);
    - append a bullet under `## Принятые меры` in the existing style: short, location/object — essence of the measure.
@@ -239,7 +260,7 @@ Do **not** percent-encode path segments: keep the real filename (including
 2. Plain line (not a markdown heading): `Сохранённый ответ:` or `Сохранённые ответы:` followed by bullets.
    - **One** successfully saved response — `Сохранённый ответ:`
    - **Two or more** — `Сохранённые ответы:`
-3. One bullet per successfully processed PDF (moved to a case):
+3. One bullet per successfully processed file (moved to a case):
 
 ```markdown
 Сохранённый ответ:
@@ -247,20 +268,27 @@ Do **not** percent-encode path segments: keep the real filename (including
 - [PDF](<VAO/bike-friendly-drain-grates/16-th-parkovaya-35/response/17-65-6736∕26_….pdf>), [16-я Парковая, 35](VAO/bike-friendly-drain-grates/16-th-parkovaya-35/response/response.md) — Мосводосток заменил решётку
 ```
 
+ЦППК body `.md` example (no PDF):
+
+```markdown
+- [ответ](ZAO/public-transport/d4-toilet/2026-07-28/response/response-cppk.md), [D4 туалет](ZAO/public-transport/d4-toilet/2026-07-28/response/response-cppk.md) — ЦППК: проверка и требование аутсорсеру
+```
+
 Rules for each bullet:
 
-- Start with `[PDF](<repo-relative-pdf>)`, then `, `, then the location link and essence.
+- **PDF:** start with `[PDF](<repo-relative-pdf>)`, then `, `, then the location link and essence.
+- **Body `.md`:** start with `[ответ](…/response.md)` or `[ответ](…/response-cppk.md)` (the file just placed), then `, `, then the location link (same file is fine) and essence.
 - Targets (paths relative to the repo root, `/` separators):
   - `[PDF]` → the concrete PDF just moved into `<case>/response/` (basename after `mv`, including any §6 truncation);
-  - location link → that case’s `response/response.md`;
+  - location link → that case’s `response/response.md` (or `response-cppk.md` when that is the saved ЦППК text);
   - `[фото]` → the concrete file from step 8 (e.g. `{case}-result.jpg`), not the folder.
 - **Always** wrap the `[PDF]` destination in literal angle brackets: `[PDF](<…/file.pdf>)`. Mos.ru basenames are long and contain special characters; `<…>` keeps the markdown link intact.
 - For `response.md` / photo paths without spaces or exotic characters, plain `(path)` is fine; if unsure, use `<…>` too.
 - Link text for the second link = location/object only (before the dash). After that link: ` — essence` of the agency reply (same style as measure bullets in `statistics.md`).
-- Write the summary from the response already read (after `pdf-to-text`); do not invent.
+- Write the summary from the response already read (after `pdf-to-text` or from the placed `.md`); do not invent.
 - No long quotes; no score in the normal case.
 - Low-confidence match: after the bullet, a short note + 2–3 alternatives.
-- If `response.md` was skipped (already existed): `[PDF](<…>), [location](…/response.md) — essence — пропущен` (or `[PDF](<…>), [location](…/response.md) — пропущен` if there is no text).
+- If `response.md` was skipped (already existed) for a PDF: `[PDF](<…>), [location](…/response.md) — essence — пропущен` (or `[PDF](<…>), [location](…/response.md) — пропущен` if there is no text).
 - If photos were extracted in step 8: append to the same bullet `, [фото](…/photos/….jpg)` (use `<…>` if needed). Example:
 
 ```markdown
@@ -269,7 +297,7 @@ Rules for each bullet:
 
 - Several photos: `, [фото](path1), [фото 2](path2)`.
 - If photo extraction was triggered but found nothing / failed deps: one short note, do not invent files or a `[фото]` link.
-- Unmatched PDF left in `inbox/`: explain separately; do not invent a case path.
+- Unmatched file left in `inbox/`: explain separately; do not invent a case path.
 
 4. If there was **at least one** successfully saved response in this run — end with **exactly** this line (NBSP after «в» and «ваш»):
 
@@ -288,9 +316,9 @@ Pure `/inbox` (no mail) does **not** print a Gmail / Mos-ru intro — only the b
 
 ### 11. Commit and push (immediate — no Apply)
 
-Do **not** ask for confirmation (no AskQuestion / no «ок»). After steps 1–9 (all PDFs processed, `statistics.md` updated when applicable), save **before** finishing — do not wait for the user to Apply files.
+Do **not** ask for confirmation (no AskQuestion / no «ок»). After steps 1–9 (all files processed, `statistics.md` updated when applicable), save **before** finishing — do not wait for the user to Apply files.
 
-Count **successful cases** = PDFs successfully moved to a case in this run (same set as in §9). Leave unmatched PDFs in `inbox/` out of every path list.
+Count **successful cases** = files (PDF or ЦППК `.md`) successfully moved to a case in this run (same set as in §9). Leave unmatched files in `inbox/` out of every path list.
 
 **One successful case:**
 
@@ -302,7 +330,7 @@ Count **successful cases** = PDFs successfully moved to a case in this run (same
 For each case `i = 1..N`:
 
 1. Build an explicit path list:
-   - `<case_i>/response/` (PDF, `response.md`, `photos/`, …)
+   - `<case_i>/response/` (PDF, `response.md`, `response-cppk.md`, `photos/`, …)
    - If `i == 1` **and** `statistics.md` was changed in this run — also include `statistics.md`
 2. Read and execute [`/save-selected`](../save-selected/SKILL.md), **passing that path list**.
 3. `/inbox` itself does **not** run `git add` for the multi-case path — staging is `/save-selected`’s job.
@@ -311,14 +339,14 @@ Limits:
 
 - One case → one `/save` commit (may include unrelated dirty files because of `git add .`).
 - N cases → N `/save-selected` commits; first usually carries `statistics.md`.
-- Unmatched / skipped PDFs and unrelated dirty files are not added to `/save-selected` lists.
+- Unmatched / skipped files and unrelated dirty files are not added to `/save-selected` lists.
 
 ## Safety Rules
 
-- Process PDFs from `inbox/` only in v1.
-- Do not batch-process PDFs outside `inbox/` unless the user explicitly asks.
-- Do not silently overwrite existing `response.md` or duplicate PDFs in `response/`.
-- Before `mv`, ensure the destination basename is ≤ 255 UTF-8 bytes (ext4 limit); truncate the stem from the end if needed (§6).
+- Process `*.pdf` and ЦППК `ЦППК_*.md` dumps from `inbox/` only in v1.
+- Do not batch-process response files outside `inbox/` unless the user explicitly asks.
+- Do not silently overwrite existing `response.md` / `response-cppk.md` or duplicate PDFs in `response/`.
+- Before `mv` of a PDF, ensure the destination basename is ≤ 255 UTF-8 bytes (ext4 limit); truncate the stem from the end if needed (§6a).
 - Do not invent measures or change statistics counters except from successfully processed responses in this run.
 - Do not change **Обращений подано** from `/inbox`.
 - Do not invent photo files; only save what `extract-response-photos` actually writes.
