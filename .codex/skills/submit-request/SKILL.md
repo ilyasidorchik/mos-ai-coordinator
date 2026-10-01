@@ -22,7 +22,7 @@ Agent fills the form; **user attaches photos manually** — CDP file upload is b
 Before starting, verify:
 
 1. **Browser Tab** enabled: Settings → Tools & MCP → Browser Automation → Browser Tab.
-2. Photos in `request/photos/` are each **under 5 MB** (run `compress-photo` if needed).
+2. Photos and videos in `request/photos/` are each **under 5 MB** (run `compress-photo` / `compress-video` if needed).
 3. `request.md` is ready (`prepare-request` if user asked for editorial pass).
 
 Login is **not** assumed from prerequisites — always verify it in Step 0 after opening the page.

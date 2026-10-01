@@ -17,11 +17,12 @@ disable-model-invocation: true
 Final preparation of a case before submission:
 
 1. Prepare all photos in `request/photos/` via [`ready-photo`](../ready-photo/SKILL.md).
-2. Check `request/request.md` for spelling, punctuation, factual accuracy, and semantic coherence.
-3. Fix clear errors in place with minimal rewrites.
-4. Run the [`typograf`](../typograf/SKILL.md) skill on the same file.
+2. Prepare videos in the same `photos/` folder via [`compress-video`](../compress-video/SKILL.md) when any `.mov`/`.mp4`/… exceeds 5 MB or needs trim.
+3. Check `request/request.md` for spelling, punctuation, factual accuracy, and semantic coherence.
+4. Fix clear errors in place with minimal rewrites.
+5. Run the [`typograf`](../typograf/SKILL.md) skill on the same file.
 
-Do not duplicate photo-naming, compression, or typography rules here — always delegate to those skills.
+Do not duplicate photo-naming, compression, video, or typography rules here — always delegate to those skills.
 
 ## Workflow
 
@@ -37,6 +38,10 @@ Do not duplicate photo-naming, compression, or typography rules here — always 
 If the photos folder is missing or has no supported images (`.jpg`, `.jpeg`, `.png`, `.webp`, `.heic` and upper-case variants) — skip this step.
 
 Otherwise read [`.codex/skills/ready-photo/SKILL.md`](../ready-photo/SKILL.md) and apply it to that folder. Do not invent rename or compression rules here.
+
+### 2b. Prepare videos
+
+If the same `photos/` folder has videos (`.mov`, `.mp4`, `.m4v`, `.webm`, `.mkv`, `.avi`) that are **≥ 5 MB** or the user asked to trim them — read [`.codex/skills/compress-video/SKILL.md`](../compress-video/SKILL.md) and run it **once per video**. Skip videos already under 5 MB unless trim was requested.
 
 ### 3. Gather context
 
@@ -111,6 +116,7 @@ Do not hand-edit NBSP, quotes, or dashes — the script applies them.
 Brief summary:
 
 - photos: summary from `ready-photo` (renamed / compressed / skipped; confirm all are under 5 MB, or list any that are still larger);
+- videos: summary from `compress-video` if any were processed (path, before/after size, under 5 MB yes/no);
 - what was fixed in the text (орфография, пунктуация, факты, смысл);
 - what could not be verified and needs the user's input;
 - confirmation that typograf was applied.

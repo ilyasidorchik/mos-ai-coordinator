@@ -91,17 +91,19 @@ District code = first path segment under the repo root:
 
 Unknown code — use the folder name as-is.
 
-Etalon:
+Etalon (final HTML after §6; plain draft before typograf has no tags):
 
-```text
+```html
 Поменяли решётку на безопасную для вело
 
 ВАО, 16-я Парковая ул., д. 18
-55.802714, 37.830194
+<code>55.802714, 37.830194</code>
 ```
 
 Coordinates from lines like `Координаты…: 55.802714, 37.830194` — keep numbers
-as written. If none — omit the coordinates line.
+as written. If none — omit the coordinates line. When present: after typograf and
+HTML-escape, wrap the **entire** coordinates line in `<code>…</code>` (Telegram
+Bot API HTML monospace). Do not use `<pre>`, Markdown backticks, or other tags.
 
 #### Ordinary response
 
@@ -177,12 +179,16 @@ printf '%s' "$PLAIN_CAPTION" | .codex/skills/typograf/scripts/typograf.sh -
 ```
 
 3. HTML-escape plain text (`&`, `<`, `>` outside tags).
-4. Wrap blockquote body (ordinary mode) in `<blockquote>…</blockquote>`.
-5. Wrap `Обращение` and `ответ` in `<a href="…">…</a>` (keep the typografed
+4. Grate with coordinates: wrap the coordinates line in `<code>…</code>`.
+5. Wrap blockquote body (ordinary mode) in `<blockquote>…</blockquote>`.
+6. Wrap `Обращение` and `ответ` in `<a href="…">…</a>` (keep the typografed
    NBSP and em dash between them).
-6. Caption limit: 1024 characters (Telegram).
-7. Publish via [`telegram`](../telegram/SKILL.md) — pass ready HTML caption and
+7. Caption limit: 1024 characters (Telegram).
+8. Publish via [`telegram`](../telegram/SKILL.md) — pass ready HTML caption and
    absolute photo paths (one or more `--photo`). Do not typograf again there.
+
+Order: plain → typograf → escape → `<code>` on coordinates (grate) →
+`<blockquote>` (ordinary) → footer links → send.
 
 Example:
 
