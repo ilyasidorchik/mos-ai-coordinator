@@ -15,7 +15,7 @@ disable-model-invocation: true
 
 Process official response files dropped into [`inbox/`](../../../inbox/):
 
-1. Match each PDF or ЦППК body `.md` to the right case.
+1. Match each PDF or ЦППК body `.md` to the right case (or create an orphan case if score = 0).
 2. Move it to `<case>/response/`.
 3. For PDFs — run the [`pdf-to-text`](../pdf-to-text/SKILL.md) workflow. For body
    `.md` — place as `response.md` or `response-cppk.md` (no pdf-to-text).
@@ -49,7 +49,7 @@ Scan the repo for folders with `request/request.md` or `request/request.txt`. Fo
 | `locations` | streets, addresses, districts, metro stations, bus stops/ОРП from title and text |
 | `topics` | subject: «выделенная полоса», «пешеходный переход», «разметка СИМ», «интервал движения», etc. |
 
-Route only into cases that use `response/` (etalon layout). Do not invent a case path for unmatched PDFs or `.md` dumps.
+Route into cases that use `response/` (etalon layout). If no existing case matches (score = 0) — create a new case from the response (§5a); do not leave orphan responses in `inbox/`.
 
 Normalization for comparison: lower-case, `ё→е`, collapse whitespace, strip NBSP, replace `∕` with `/`.
 
@@ -119,9 +119,48 @@ See [reference.md](reference.md) for real matching examples.
 
 - Always pick the case with the **highest total score** and move there.
 - If score < 50 **or** gap to second place < 15 — flag «низкая уверенность» in the report (short note + 2–3 alternatives after that list item), but still move to the best guess.
-- If score = 0 — leave the file in `inbox/`, explain why, continue to the next file.
+- If score = 0 — create a **new orphan case** from the response (§5a), then continue with move / transcription as for a normal match.
 - Scoring signals (`mos_id`, `заголовок`, локация+тема, …) are for matching only — do **not** put score lines in the normal user report.
-- For ЦППК `.md`, filename has no mos.ru `идентификатор` — rely on body text, locations, topics, and optional `cppk_appeal_id` only as a weak hint (do not invent a case from the id alone).
+- For ЦППК `.md`, filename has no mos.ru `идентификатор` — rely on body text, locations, topics, and optional `cppk_appeal_id` only as a weak hint (do not invent a case from the id alone when a better content match exists).
+
+### 5a. Create orphan case (score = 0)
+
+When no existing case matches, create a typical case folder from the **response context** and place the response there. Do **not** invent appeal text or document numbers that are not in the response.
+
+Path rules:
+
+- `<district>/<topic>/<case>/` — latin, lower-case, short slug from topic/location in the response (same style as the repo).
+- Clear district/street → under `ZAO/` / `SVAO/` / …; otherwise → `common/<topic>/…`.
+
+Structure:
+
+```text
+<district>/<topic>/<case>/
+  README.md
+  request/
+    photos/
+    request.md
+  response/
+```
+
+`request/request.md` stub — fields only, no reconstructed letter:
+
+```markdown
+Номера обращений:
+<id from response if any> <agency>
+
+Заголовок:
+<short title from response topic>
+
+Текст:
+(Текст обращения не сохранился.)
+```
+
+`README.md` — short journal: title with the essence, «Текущий статус» noting that only the agency response was saved (appeal text missing from the repo).
+
+Then place the response into `response/` (§6) and continue the normal pipeline. In the report bullet append « — кейс создан без request».
+
+**Statistics for each orphan case created in this run:** `+1` to **Ответов получено** and `+1` to **Обращений подано** (the appeal was not counted before). Measures — by response text as usual (§9).
 
 ### 6. Move file
 
@@ -218,12 +257,12 @@ At the end of the run — after all files were processed (move + `pdf-to-text` w
 
 1. Open `statistics.md`.
 2. **Ответов получено:** add `+1` for each PDF or ЦППК `.md` successfully moved to a case in this run. Do **not** count files left in `inbox/` or skipped due to a name conflict in `response/`.
-3. **Меры:** for each successfully moved file, read the response text (`response.md` / `response-cppk.md` if created or already present; otherwise the PDF text from step 3) and decide whether measures were taken. Count as measures: disciplinary action, driver review/sanctions, inclusion in a works project, concrete follow-up to a balance holder, or other explicit agency actions beyond a refusal / brush-off. Do **not** count pure refusal, «учтем», or «направлено на рассмотрение» with no outcome.
-4. If measures were found:
+3. **Обращений подано:** add `+1` for each **orphan case created** in this run (§5a). Do **not** change this counter for matches into existing cases.
+4. **Меры:** for each successfully moved file, read the response text (`response.md` / `response-cppk.md` if created or already present; otherwise the PDF text from step 3) and decide whether measures were taken. Count as measures: disciplinary action, driver review/sanctions, inclusion in a works project, concrete follow-up to a balance holder, or other explicit agency actions beyond a refusal / brush-off. Do **not** count pure refusal, «учтем», or «направлено на рассмотрение» with no outcome.
+5. If measures were found:
    - add `+1` to **Мер принято** (or `+N` if one response clearly contains several independent measures — same style as «Автобус 688 ×2»);
    - append a bullet under `## Принятые меры` in the existing style: short, location/object — essence of the measure.
-5. If no measures — leave the measures counter and list unchanged.
-6. Do **not** change **Обращений подано** (out of scope for `/inbox`).
+6. If no measures — leave the measures counter and list unchanged.
 7. Commit/push of `statistics.md` happens in §11 together with the first case (via `/save` or `/save-selected`), not as a separate agent-side commit outside those skills.
 
 ### 10. Report
@@ -248,12 +287,13 @@ Do **not** percent-encode path segments: keep the real filename (including
 
 ```markdown
 [Статистика](statistics.md) обновлена:
+обращений подано 110→111
 ответов получено 24→25
 мер принято 5→6
 ```
 
 - Link on the word «Статистика»; href = `statistics.md`.
-- Include «мер принято A→B» only if the measures counter changed; otherwise only «ответов получено …».
+- Include «обращений подано A→B» only when orphan cases were created (§5a); «мер принято A→B» only if the measures counter changed; always include «ответов получено …» when responses were saved.
 - Do **not** repeat measure bullets in the report (they live in `statistics.md`).
 - If statistics were not updated — omit this block.
 
@@ -288,6 +328,7 @@ Rules for each bullet:
 - Write the summary from the response already read (after `pdf-to-text` or from the placed `.md`); do not invent.
 - No long quotes; no score in the normal case.
 - Low-confidence match: after the bullet, a short note + 2–3 alternatives.
+- Orphan case created (§5a): after the essence, append ` — кейс создан без request`.
 - If `response.md` was skipped (already existed) for a PDF: `[PDF](<…>), [location](…/response.md) — essence — пропущен` (or `[PDF](<…>), [location](…/response.md) — пропущен` if there is no text).
 - If photos were extracted in step 8: append to the same bullet `, [фото](…/photos/….jpg)` (use `<…>` if needed). Example:
 
@@ -297,7 +338,6 @@ Rules for each bullet:
 
 - Several photos: `, [фото](path1), [фото 2](path2)`.
 - If photo extraction was triggered but found nothing / failed deps: one short note, do not invent files or a `[фото]` link.
-- Unmatched file left in `inbox/`: explain separately; do not invent a case path.
 
 4. If there was **at least one** successfully saved response in this run — end with **exactly** this line (NBSP after «в» and «ваш»):
 
@@ -318,7 +358,7 @@ Pure `/inbox` (no mail) does **not** print a Gmail / Mos-ru intro — only the b
 
 Do **not** ask for confirmation (no AskQuestion / no «ок»). After steps 1–9 (all files processed, `statistics.md` updated when applicable), save **before** finishing — do not wait for the user to Apply files.
 
-Count **successful cases** = files (PDF or ЦППК `.md`) successfully moved to a case in this run (same set as in §9). Leave unmatched files in `inbox/` out of every path list.
+Count **successful cases** = files (PDF or ЦППК `.md`) successfully moved to a case in this run (same set as in §9), including newly created orphan cases (§5a).
 
 **One successful case:**
 
@@ -330,7 +370,7 @@ Count **successful cases** = files (PDF or ЦППК `.md`) successfully moved to
 For each case `i = 1..N`:
 
 1. Build an explicit path list:
-   - `<case_i>/response/` (PDF, `response.md`, `response-cppk.md`, `photos/`, …)
+   - `<case_i>/` (for orphan cases: `README.md`, `request/`, `response/`) or at least `<case_i>/response/` (PDF, `response.md`, `response-cppk.md`, `photos/`, …)
    - If `i == 1` **and** `statistics.md` was changed in this run — also include `statistics.md`
 2. Read and execute [`/save-selected`](../save-selected/SKILL.md), **passing that path list**.
 3. `/inbox` itself does **not** run `git add` for the multi-case path — staging is `/save-selected`’s job.
@@ -339,7 +379,7 @@ Limits:
 
 - One case → one `/save` commit (may include unrelated dirty files because of `git add .`).
 - N cases → N `/save-selected` commits; first usually carries `statistics.md`.
-- Unmatched / skipped files and unrelated dirty files are not added to `/save-selected` lists.
+- Skipped files and unrelated dirty files are not added to `/save-selected` lists.
 
 ## Safety Rules
 
@@ -347,8 +387,8 @@ Limits:
 - Do not batch-process response files outside `inbox/` unless the user explicitly asks.
 - Do not silently overwrite existing `response.md` / `response-cppk.md` or duplicate PDFs in `response/`.
 - Before `mv` of a PDF, ensure the destination basename is ≤ 255 UTF-8 bytes (ext4 limit); truncate the stem from the end if needed (§6a).
-- Do not invent measures or change statistics counters except from successfully processed responses in this run.
-- Do not change **Обращений подано** from `/inbox`.
+- Do not invent measures or change statistics counters except from successfully processed responses in this run (and **Обращений подано** only for orphan cases created in §5a).
+- Do not invent appeal text in orphan `request/request.md` — use exactly `(Текст обращения не сохранился.)` under `Текст:`.
 - Do not invent photo files; only save what `extract-response-photos` actually writes.
 - Commit and push only via `/save` (single case) or `/save-selected` (several cases); do not rely on an Apply / `afterFileEdit` hook.
 - Do not post to Telegram from `/inbox` without the user’s explicit agreement after the «Отправлю в ваш Телеграм-канал?» offer; on agreement delegate to [`telegram-report`](../telegram-report/SKILL.md).
