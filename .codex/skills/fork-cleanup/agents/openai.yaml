@@ -1,0 +1,4 @@
+interface:
+  display_name: "Fork Cleanup"
+  short_description: "Remove original author's cases from a fork; keep etalons; reset statistics"
+  default_prompt: "Use $fork-cleanup to prepare this fork: dry-run, confirm, delete author cases, reset statistics, then /save."

@@ -71,7 +71,8 @@ SVAO/pedestrian-crossings/otradnoye/
 - каждая итерация — полный снимок обращения и ответа со своим набором фото;
 - отправленный `request/request.md` не переписывать: после ответа создавать следующую папку итерации;
 - эталон `attempt-*`: `SVAO/pedestrian-crossings/zapovednaya/`;
-- эталон `YYYY-MM-DD`: `ZAO/public-transport/bus-688-krylatskoye/`.
+- эталон `YYYY-MM-DD`: `ZAO/public-transport/bus-688-krylatskoye/`;
+- в форках после `/fork-cleanup` остаются три кейса-образца автора исходного репозитория (`zapovednaya`, `bus-688-krylatskoye`, `SVAO/cycling/otradnoye-cycle-sign`) — их не редактировать, не считать в своей статистике и не привязывать к ним входящие ответы в `/inbox`.
 
 В корне серии обязателен `README.md` — короткий журнал кейса. Формат:
 

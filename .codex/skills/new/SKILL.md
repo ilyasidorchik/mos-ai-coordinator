@@ -18,7 +18,7 @@ End the reply with the statistics line and a link
 
 1. Resolve district / topic / case name (and whether this is a repeat).
 2. Create the correct folder structure.
-3. Find 1–2 similar cases and link them.
+3. Find 1–2 similar cases and link them (skip if none fit, e.g. a fresh fork).
 4. Immediately fill `Заголовок:` and `Текст:` in `request.md` (do **not** ask
    whether to draft). If the prompt contains **«по шаблону»**, follow that
    template.
@@ -94,7 +94,7 @@ Leave `photos/` empty. Do not add `.gitkeep` unless the repo already uses it for
 ### 4. Report and draft
 
 1. Tell the user the created path (and if the case was converted to a series).
-2. Find **1–2 similar** cases in the repo (same topic, location, or problem type). Prefer reading nearby `request.md` titles. Give relative links to those `request.md` files or case roots.
+2. Find **1–2 similar** cases in the repo (same topic, location, or problem type). Prefer reading nearby `request.md` titles. Give relative links to those `request.md` files or case roots. If none fit (e.g. a freshly cleaned fork with only etalon samples) — **skip** this step; do not invent links.
 3. Immediately draft into `request.md`. If the prompt contains **«по шаблону»**, follow the supplied template (adapt location/facts from the prompt). Do **not** ask whether to draft.
 4. After writing `request.md`, open it in the editor:
    `cursor -g "<repo-relative-or-absolute-path-to-request.md>"`
@@ -126,7 +126,7 @@ Skip this step if no case was created (e.g. only a clarifying question).
 Always fill `Заголовок:` and `Текст:` as part of `/new`.
 
 - Tone and structure: [`AGENTS.md`](../../../AGENTS.md).
-- Use the similar cases as style examples.
+- Use the similar cases as style examples when any were found; otherwise follow `AGENTS.md` and templates only.
 - For «по шаблону»: follow the user’s template closely; substitute the concrete
   location, dates, and facts from the prompt — do not invent details absent there.
 - For a series: read prior `attempt-*/request/request.md` and `response/response.md`; argue from real replies, do not invent реквизиты.
