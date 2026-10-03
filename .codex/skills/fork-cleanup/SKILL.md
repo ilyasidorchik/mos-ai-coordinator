@@ -31,7 +31,8 @@ Works as `/fork-cleanup` and from natural phrases (see below). Always run the sc
 **Keep**
 
 - Tooling: `.codex/`, `.cursor/`, `.templates/`, `.vscode/`, `docs/`
-- Root files: `AGENTS.md`, `CLAUDE.md`, `README.md`, `logo.png`, `.env.example`, `.gitignore`
+- Root files: `AGENTS.md`, `CLAUDE.md`, `README.md`, `.env.example`, `.gitignore`
+- Assets: `assets/logo.png` (и другие файлы в `assets/`)
 - `inbox/.gitkeep`
 - Etalon sample cases (do not edit; not the forker's appeals):
   - `SVAO/pedestrian-crossings/zapovednaya/`
