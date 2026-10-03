@@ -2,9 +2,10 @@
 name: sync-worktrees
 description: >-
   Rebases the second-hand worktree onto main, auto-resolves statistics.md
-  appeal-count conflicts, force-pushes second-hand, then fast-forwards main
-  to second-hand and pushes main. Use when the user mentions /sync-worktrees,
-  «синхронизируй second-hand», or «ребейзни second-hand на main».
+  counter conflicts (appeals / responses / measures), force-pushes
+  second-hand, then fast-forwards main to second-hand and pushes main. Use
+  when the user mentions /sync-worktrees, «синхронизируй second-hand», or
+  «ребейзни second-hand на main».
 disable-model-invocation: true
 ---
 
@@ -16,7 +17,7 @@ Synchronize the parallel worktree `second-hand` with `main`, ending with
 commits present on **`main` and `origin/main`**:
 
 1. Rebase `second-hand` onto current `origin/main`.
-2. Auto-resolve a typical `statistics.md` «Обращений подано» conflict.
+2. Auto-resolve a typical `statistics.md` counter-row conflict.
 3. `git push --force-with-lease` for `second-hand`.
 4. Fast-forward `main` to `second-hand` and `git push origin main`.
 
@@ -60,19 +61,26 @@ git rebase origin/main
 ### 4. Conflicts during rebase
 
 **Allowed auto-resolve** — only when the sole conflict is `statistics.md` and
-only the «Обращений подано» cell differs:
+conflict markers are only on the counter row
+(`Обращений подано` / `Ответов получено` / `Мер принято`):
+
+For **each** of the three cells independently:
 
 1. Read the count on `HEAD` (onto / `main`): `HEAD_count`.
 2. Read the count in the commit being applied: `ours`.
 3. Read the count at the merge-base of that commit vs onto: `base`.
 4. Set resolved value: `HEAD_count + (ours − base)`.
-5. Leave «Ответов получено» and «Мер принято» as on `HEAD` unless they are
-   also conflicted (then stop — do not invent).
-6. Write the resolved file, `git add statistics.md`, continue.
 
-**Any other conflict** (other files, or unclear `statistics.md`) — do **not**
-guess. Prefer `git rebase --abort` if nothing was partially continued, or leave
-the rebase paused; describe conflicts and ask the user.
+If a cell is identical on both sides, keep that value (delta is 0).
+
+Keep the rest of `statistics.md` as already auto-merged by git (e.g. changes
+in «Принятые меры»). Write the resolved file, `git add statistics.md`,
+continue.
+
+**Any other conflict** (other files, or conflict markers outside the counter
+row / non-numeric cells) — do **not** guess. Prefer `git rebase --abort` if
+nothing was partially continued, or leave the rebase paused; describe
+conflicts and ask the user.
 
 ### 5. Continue rebase
 
@@ -121,7 +129,7 @@ Never `--force` / `--force-with-lease` on `main` / `master`.
 Briefly:
 
 - whether rebase ran (onto which SHA);
-- `statistics.md` resolution if any (`old → new` for «Обращений подано»);
+- `statistics.md` resolution if any (`old → new` for each changed counter);
 - tips of `second-hand` and `main` (should match after ff);
 - both pushes (or skips).
 
@@ -137,7 +145,7 @@ Briefly:
 | --- | --- | --- |
 | Missing worktree | No checked-out `second-hand` or `main` path | Create/add worktree, or name another branch |
 | Dirty working tree | Uncommitted changes in a worktree | Commit/`/save`, stash, or discard — then retry |
-| Non-statistics conflict | Rebase hit files beyond the appeal counter | Abort or resolve with the user |
+| Non-statistics conflict | Rebase hit files beyond the stats counters | Abort or resolve with the user |
 | Lease rejected | Remote `second-hand` moved | Fetch, inspect, retry `--force-with-lease` only if safe |
 | Non-ff merge into `main` | `main` and `second-hand` diverged | Stop; rebase/sort with user — no merge commit by default |
 | Network / auth error | Could not reach remote | Check internet / SSH / `gh auth`; retry later |

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Check Mail for Sent Requests"
+  short_description: "Fetch mos.ru sent-appeal confirmations and backfill missing request.md"
+  default_prompt: "Use $check-mail-for-sent-requests to fetch mos.ru «обращение отправлено» emails from Gmail and save missing appeal texts into request.md."
