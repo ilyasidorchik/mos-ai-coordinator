@@ -76,11 +76,17 @@ Use this skeleton and fill `Заголовок:` and `Текст:` in the same p
 «When drafting»). Put the agency short name under `Номер обращения:` from
 Agency hint (default `Дептранс`; if the user names another — its short name).
 Do not invent appeal numbers. For several agencies — one short name per line,
-still without numbers:
+still without numbers.
+
+Under `Дата:` put **today’s date** in `DD.MM.YYYY` (local calendar day when
+`/new` runs). Do not leave `Дата:` empty and do not invent another date.
 
 ```markdown
 Номер обращения:
 Дептранс
+
+Дата:
+{DD.MM.YYYY}
 
 Заголовок:
 
@@ -88,6 +94,8 @@ still without numbers:
 Текст:
 
 ```
+
+Example: if `/new` runs on 4 October 2026, write `04.10.2026`.
 
 Leave `photos/` empty. Do not add `.gitkeep` unless the repo already uses it for that case.
 
@@ -133,6 +141,7 @@ Always fill `Заголовок:` and `Текст:` as part of `/new`.
 - Do **not** run `prepare-request` / `typograf` unless the user asks.
 - Put the agency short name under `Номер обращения:` immediately (default
   `Дептранс`). Add the appeal number only after submission assigns one.
+- Put today’s date under `Дата:` in `DD.MM.YYYY` (same day as `/new`).
 
 ## Expected user phrases
 
@@ -146,7 +155,8 @@ Always fill `Заголовок:` and `Текст:` as part of `/new`.
 
 - Do not submit on mos.ru or invoke `submit-request`.
 - Do not run `prepare-request` / `typograf` before there is appeal text.
-- Do not invent appeal numbers, dates, or agency reply реквизиты.
+- Do not invent appeal numbers or agency reply реквизиты. For `Дата:` use
+  today’s calendar date only (`DD.MM.YYYY`), not a guessed sent or incident date.
 - Do not rewrite an already sent `request.md` from a previous attempt.
 - Do not bump **Обращений подано** if the case was not created.
 - Do not change **Ответов получено** or **Мер принято** from `/new`.
