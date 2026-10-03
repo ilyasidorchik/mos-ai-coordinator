@@ -42,7 +42,9 @@ Same Gmail OAuth as `/mail-inbox`:
 `process.env` wins over `.env`. Do **not** read, echo, or pass tokens yourself.
 
 If the script exits with `GMAIL_* is not set` — stop and tell the user to fill
-[`.env`](../../../.env) or Cloud Agents Secrets.
+[`.env`](../../../.env) or Cloud Agents Secrets. First-time setup:
+[docs/gmail-oauth.md](../../../docs/gmail-oauth.md). Do not ask the user to paste
+tokens into chat.
 
 If `invalid_grant` — run locally:
 

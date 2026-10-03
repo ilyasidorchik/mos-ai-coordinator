@@ -46,7 +46,10 @@ Do **not** read, echo, or pass tokens yourself.
 
 If the script exits with `GMAIL_* is not set` — stop and tell the user to fill
 [`.env`](../../../.env) (copy from [`.env.example`](../../../.env.example)) or add
-the secrets in the dashboard. Fallback: drop PDFs into `inbox/` manually and run `/inbox`.
+the secrets in the dashboard. First-time setup (own Google Cloud Desktop client,
+app left in Testing): [docs/gmail-oauth.md](../../../docs/gmail-oauth.md).
+Do not ask the user to paste tokens into chat.
+Fallback: drop PDFs into `inbox/` manually and run `/inbox`.
 
 If the script exits with `invalid_grant` / expired refresh token — OAuth app is in
 **Testing** (≈7-day tokens). Tell the user to run locally:
