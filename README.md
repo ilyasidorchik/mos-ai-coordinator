@@ -79,7 +79,7 @@ GMAIL_REFRESH_TOKEN=
 
 Это будет выглядеть страшно, но это несложно.
 
-- Заходим под тем же Gmailна сайт [Google Cloud Console](https://console.cloud.google.com/)
+- Заходим под тем же Gmail на сайт [Google Cloud Console](https://console.cloud.google.com/)
 - Создаём проект
 - Включаем **Gmail API**: APIs & Services → Library → Gmail API → Enable.
 - Настраиваем **OAuth consent screen**: User type — External; App name и email — любые свои; статус — Testing; в Test users добавляем свой Gmail.
