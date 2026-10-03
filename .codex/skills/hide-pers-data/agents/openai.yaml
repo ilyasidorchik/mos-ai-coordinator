@@ -1,0 +1,4 @@
+interface:
+  display_name: "Hide Personal Data"
+  short_description: "Redact personal data from a response PDF into _pdf_pages"
+  default_prompt: "Use $hide-pers-data to hide personal data in the response PDF and render redacted page screenshots."
