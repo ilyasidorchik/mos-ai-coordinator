@@ -290,6 +290,22 @@ function safeBasename(name) {
   return truncateUtf8Bytes(stem, budget) + ext;
 }
 
+/**
+ * Basename for a PDF part. ЦППК (and rarely others) may send application/pdf
+ * with an empty filename — invent a stable name so the attachment is still saved.
+ */
+function pdfBasename(part, { source, subject, messageId }) {
+  const raw = part.filename && String(part.filename).trim();
+  if (raw) return safeBasename(raw);
+  if (source === 'cppk') {
+    const appealId = cppkAppealId(subject || '');
+    return safeBasename(
+      appealId ? `ЦППК_обращение_${appealId}.pdf` : `ЦППК_${messageId}.pdf`,
+    );
+  }
+  return safeBasename(`attachment_${messageId}.pdf`);
+}
+
 function isPdfPart(part) {
   const mime = (part.mimeType || '').toLowerCase();
   if (mime.startsWith('application/pdf')) return true;
@@ -392,7 +408,11 @@ async function processMessage(accessToken, messageId, { dryRun, inboxDir, label 
       if (!part.attachmentId || !isPdfPart(part)) continue;
       let fileName;
       try {
-        fileName = safeBasename(part.filename);
+        fileName = pdfBasename(part, {
+          source: result.source,
+          subject: result.subject,
+          messageId,
+        });
       } catch {
         result.skipped.push({ reason: 'unsafe_name', filename: part.filename });
         continue;

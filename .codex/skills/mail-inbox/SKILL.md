@@ -74,8 +74,16 @@ Only citizen-appeal **response** emails (enforced inside the script):
 
 Download **only** `application/pdf` attachments from both sources. Skip ZIP «Документ с ЭП», `message/rfc822`, and other parts.
 
-For **ЦППК without a PDF** — the script saves the email body as
-`inbox/ЦППК_обращение_<id>.md` (or `ЦППК_<messageId>.md`) with a short YAML frontmatter
+PDF with an empty or missing `filename` is still downloaded (ЦППК often sends
+nameless `application/pdf`). The script invents a basename:
+
+- ЦППК + appeal id in the subject → `ЦППК_обращение_<id>.pdf`
+- ЦППК without id → `ЦППК_<messageId>.pdf`
+- other sources → `attachment_<messageId>.pdf`
+
+For **ЦППК without a PDF** (no PDF part at all — not a nameless PDF) — the
+script saves the email body as `inbox/ЦППК_обращение_<id>.md` (or
+`ЦППК_<messageId>.md`) with a short YAML frontmatter
 (`source`, `subject`, `from`, `date`, `cppk_appeal_id`).
 
 Also skip a PDF whose filename is exactly `Направлен.pdf` (case-sensitive basename). In SEDO forwards this is usually a second attachment — a duplicate scan of the same letter already inside the mos.ru export PDF.
@@ -188,6 +196,7 @@ Do not add a separate technical «Inbox:» heading.
 
 - Only process SEDO and ЦППК response emails as defined in Scope (script enforces this).
 - Only download PDF attachments (plus ЦППК body `.md` when there is no PDF).
+- Do not skip a PDF because `filename` is empty or missing — invent a basename as in Scope and download it; body `.md` is only for ЦППК with no PDF part at all.
 - Truncate attachment basenames to ≤ 255 UTF-8 bytes (ext4) when saving into `inbox/`.
 - Do not download `Направлен.pdf` — it duplicates the letter already in the mos.ru export.
 - Do not mention routine skipped attachments (`Направлен.pdf`, «Документ с ЭП.zip`, non-PDF parts) in the user report.
