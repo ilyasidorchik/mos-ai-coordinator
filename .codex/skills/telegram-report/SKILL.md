@@ -145,18 +145,24 @@ the letter.
 
 #### Ordinary
 
-Screenshots of **every** PDF page:
+Screenshots of non-blank PDF pages (skip almost empty trailing pages like a lone
+`Исп. …` line on white):
 
 1. Locate the PDF in `response/` (one file — use it; several — ask; none — stop).
-2. Render:
+2. Render via the skill script (writes only non-blank pages):
 
 ```bash
-mkdir -p response/_pdf_pages
-qlmanage -t -s 2000 -o response/_pdf_pages "response/file.pdf"
+python3 .codex/skills/telegram-report/scripts/render-pdf-pages.py \
+  "response/file.pdf"
 ```
 
-3. Sort page images in reading order; send all as an album.
-4. After a successful post — `rm -rf response/_pdf_pages`. Do not commit that
+Stdout JSON: `written` (1-based page numbers kept) and `skipped_blank`. Do **not**
+list skipped pages in the user report when the post succeeds.
+
+3. Sort `response/_pdf_pages/page-*.png` lexicographically; send those as an album.
+4. If `written` is empty / the script exits with code 2 — **stop**, do not post
+   text-only.
+5. After a successful post — `rm -rf response/_pdf_pages`. Do not commit that
    folder.
 
 ### 5. Footer links
@@ -210,6 +216,9 @@ JSON `link` (mandatory). If `link` is null — report `message_id`.
 - Do not copy bureaucratese verbatim into quotes; do not add meaning absent
   from the response.
 - Do not typograf inside `/telegram` — only here (or via `/typograf` for files).
+- Do not screenshot or send nearly blank PDF pages — use
+  `scripts/render-pdf-pages.py` (ordinary mode); never attach a blank page by
+  hand after `qlmanage`.
 - Do not commit or push; do not leave `_pdf_pages/` after a successful ordinary
   post.
 - Do not change `inbox/` or unrelated case files.
